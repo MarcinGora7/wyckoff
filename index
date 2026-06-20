@@ -1,0 +1,1836 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Wyckoff Spring Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  background: #0f1419; color: #e5e9f0;
+  line-height: 1.45; min-height: 100vh;
+}
+header.top {
+  background: #0a0f15;
+  border-bottom: 1px solid #2e3a4a;
+  padding: 18px 28px;
+}
+header.top h1 { margin: 0; color: #88c0d0; font-size: 22px; }
+header.top p { margin: 4px 0 0 0; font-size: 13px; color: #a8b5c8; }
+main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+/* Config panel */
+.panel {
+  background: #1a232e; border-radius: 10px; padding: 22px;
+  margin-bottom: 20px; border-left: 4px solid #5e81ac;
+}
+.panel h2 {
+  margin: 0 0 14px 0; font-size: 14px; text-transform: uppercase;
+  letter-spacing: 0.08em; color: #ebcb8b;
+}
+.config-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  margin-bottom: 14px;
+}
+.field { display: flex; flex-direction: column; }
+.field label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: #6b7a8c; margin-bottom: 4px;
+}
+.field input, .field select, .field textarea {
+  background: #131a22; border: 1px solid #2e3a4a;
+  color: #eceff4; padding: 8px 10px; border-radius: 4px;
+  font-size: 14px; font-family: inherit;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: #88c0d0;
+}
+.field textarea { resize: vertical; min-height: 60px; font-family: monospace; font-size: 12px; }
+
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.row.center { justify-content: center; margin-top: 8px; }
+.btn {
+  background: #5e81ac; color: #fff; border: none;
+  padding: 10px 22px; border-radius: 4px; cursor: pointer;
+  font-size: 14px; font-weight: 500; font-family: inherit;
+}
+.btn:hover { background: #6f95c4; }
+.btn:disabled { background: #3a4554; cursor: not-allowed; }
+.btn.primary { background: #a3be8c; color: #0f1419; }
+.btn.primary:hover { background: #b5cf9f; }
+.btn.danger { background: #bf616a; }
+.btn.ghost { background: transparent; border: 1px solid #4c566a; color: #d8dee9; }
+
+/* Progress */
+.progress-bar {
+  background: #131a22; border-radius: 6px; height: 24px;
+  position: relative; overflow: hidden; margin: 10px 0;
+}
+.progress-fill {
+  background: linear-gradient(90deg, #5e81ac, #88c0d0);
+  height: 100%; transition: width 0.3s; width: 0;
+}
+.progress-text {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #eceff4; font-weight: 500;
+}
+.log {
+  background: #0a0f15; border-radius: 6px; padding: 10px 14px;
+  font-family: monospace; font-size: 11px; color: #8fbcbb;
+  max-height: 160px; overflow-y: auto; margin-top: 10px;
+}
+.log-entry { padding: 2px 0; }
+.log-entry.err { color: #bf616a; }
+.log-entry.ok  { color: #a3be8c; }
+
+/* Signals */
+.signals-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin: 24px 0 12px 0;
+}
+.signals-header h2 { margin: 0; color: #88c0d0; font-size: 18px; }
+.signal {
+  background: #1a232e; border-radius: 10px; padding: 20px 24px;
+  margin-bottom: 18px; border-left: 5px solid #5e81ac;
+}
+.signal.prime { border-left-color: #a3be8c; }
+.signal.good  { border-left-color: #88c0d0; }
+.signal.ok    { border-left-color: #b48ead; }
+.sig-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  border-bottom: 1px solid #2e3a4a; padding-bottom: 12px; margin-bottom: 14px;
+}
+.sig-head h3 { margin: 0; font-size: 22px; color: #eceff4; }
+.sig-head h3 small { color: #8fbcbb; font-weight: 400; font-size: 14px; margin-left: 8px; }
+.sig-meta { font-size: 13px; color: #a8b5c8; margin-top: 4px; }
+.price-block { text-align: right; }
+.price { font-size: 28px; font-weight: 600; }
+.delta { font-size: 14px; margin-top: 2px; }
+.pos { color: #a3be8c; } .neg { color: #bf616a; }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; margin-left: 4px;
+}
+.badge-yes { background: #2e4d36; color: #a3be8c; }
+.badge-no  { background: #4d2e2e; color: #bf616a; }
+.badge-pending { background: #4a3e2e; color: #ebcb8b; }
+.cell-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  margin-bottom: 14px;
+}
+.cell {
+  background: #131a22; padding: 10px 12px; border-radius: 6px;
+}
+.lbl {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #6b7a8c;
+}
+.val { font-size: 18px; font-weight: 600; color: #eceff4; margin-top: 2px; }
+.val-sl { color: #bf616a; } .val-tp { color: #a3be8c; }
+.sub { font-size: 11px; color: #8fbcbb; margin-top: 2px; }
+.tr-block {
+  background: #131a22; padding: 10px 14px; border-radius: 6px;
+  font-size: 13px; margin-bottom: 14px; color: #d8dee9;
+}
+.tr-block b { color: #88c0d0; }
+.story { margin-top: 12px; }
+.story h4 {
+  color: #ebcb8b; font-size: 12px; margin: 8px 0 6px 0;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.chips { margin-bottom: 8px; }
+.chip {
+  display: inline-block; padding: 3px 10px; border-radius: 12px;
+  background: #2e4565; color: #88c0d0; font-size: 12px; margin: 2px;
+}
+.chip-muted { background: #2c3441; color: #6b7a8c; }
+.news-list { list-style: none; padding: 0; margin: 4px 0; font-size: 13px; }
+.news-list li { padding: 4px 0; border-bottom: 1px solid #2e3a4a; }
+.news-list a { color: #88c0d0; text-decoration: none; }
+.news-list a:hover { text-decoration: underline; }
+.news-date { color: #6b7a8c; font-size: 11px; margin-right: 6px; }
+.news-src  { color: #6b7a8c; font-size: 11px; }
+.muted { color: #6b7a8c; font-style: italic; }
+
+.hidden { display: none !important; }
+.callout {
+  background: #2e2419; border-left: 3px solid #ebcb8b;
+  padding: 10px 14px; border-radius: 4px; font-size: 13px;
+  color: #ebcb8b; margin: 10px 0;
+}
+.callout.warn { background: #2e1919; border-left-color: #bf616a; color: #d8a4a8; }
+
+/* Tabs */
+.tabs {
+  display: flex; gap: 4px; border-bottom: 1px solid #2e3a4a;
+  margin-bottom: 24px;
+}
+.tab {
+  background: transparent; border: none; color: #6b7a8c;
+  padding: 12px 22px; cursor: pointer; font-size: 14px;
+  font-weight: 500; font-family: inherit;
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+  display: flex; align-items: center; gap: 6px;
+}
+.tab:hover { color: #d8dee9; }
+.tab.active { color: #88c0d0; border-bottom-color: #88c0d0; }
+.tab-count {
+  background: #2e3a4a; color: #d8dee9; padding: 1px 8px;
+  border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.tab.active .tab-count { background: #88c0d0; color: #0f1419; }
+
+/* Journal stats cards */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+}
+.stat-card {
+  background: #1a232e; border-radius: 10px; padding: 18px 22px;
+  border-left: 4px solid #88c0d0;
+}
+.stat-card h3 {
+  margin: 0 0 8px 0; font-size: 12px; color: #ebcb8b;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.stat-card .winrate { font-size: 36px; font-weight: 600; line-height: 1.1; color: #a3be8c; }
+.stat-card .winrate.mid { color: #ebcb8b; }
+.stat-card .winrate.low { color: #bf616a; }
+.stat-card .n-label { font-size: 11px; color: #6b7a8c; margin-bottom: 10px; }
+.stat-row {
+  display: flex; justify-content: space-between; padding: 5px 0;
+  font-size: 13px; color: #d8dee9; border-top: 1px solid #2e3a4a;
+}
+.stat-row b { color: #eceff4; }
+
+/* Score buckets */
+.bucket-row {
+  display: flex; align-items: center; gap: 14px; padding: 6px 0;
+  font-size: 13px;
+}
+.bucket-label { min-width: 110px; color: #a8b5c8; font-weight: 500; }
+.bucket-vis {
+  flex: 1; height: 22px; background: #131a22; border-radius: 4px;
+  position: relative; overflow: hidden;
+}
+.bucket-fill { height: 100%; background: #a3be8c; transition: width 0.3s; }
+.bucket-fill.mid { background: #ebcb8b; }
+.bucket-fill.low { background: #bf616a; }
+.bucket-num { color: #a8b5c8; font-size: 12px; min-width: 130px; text-align: right; }
+
+/* Journal table */
+.table-wrap { overflow-x: auto; }
+.journal-table {
+  width: 100%; border-collapse: collapse;
+  background: #1a232e; border-radius: 10px; overflow: hidden;
+  font-size: 13px;
+}
+.journal-table th {
+  background: #131a22; padding: 11px 12px; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: #6b7a8c; text-align: left; font-weight: 600;
+  white-space: nowrap;
+}
+.journal-table td {
+  padding: 10px 12px; color: #d8dee9; border-top: 1px solid #2e3a4a;
+  white-space: nowrap;
+}
+.journal-table tr:hover td { background: #131a22; }
+.outcome-tp1, .outcome-tp2 { color: #a3be8c; font-weight: 500; }
+.outcome-stopped { color: #bf616a; font-weight: 500; }
+.outcome-open { color: #ebcb8b; }
+.outcome-pending { color: #6b7a8c; font-style: italic; }
+
+.tool-row {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  margin-bottom: 14px;
+}
+.tool-row select, .tool-row input[type="search"] {
+  background: #131a22; border: 1px solid #2e3a4a; color: #eceff4;
+  padding: 7px 10px; border-radius: 4px; font-family: inherit; font-size: 13px;
+}
+.btn-file {
+  background: transparent; border: 1px solid #4c566a; color: #d8dee9;
+  padding: 10px 22px; border-radius: 4px; cursor: pointer;
+  font-size: 14px; font-weight: 500; font-family: inherit;
+  display: inline-block;
+}
+.btn-file:hover { background: #2c3441; }
+
+footer.bottom {
+  text-align: center; color: #6b7a8c; font-size: 12px;
+  padding: 20px; border-top: 1px solid #2e3a4a; margin-top: 40px;
+}
+
+@media (max-width: 800px) {
+  .config-grid { grid-template-columns: 1fr 1fr; }
+  .cell-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Wyckoff Spring Scanner</h1>
+  <p>Detektor fazy C akumulacji Wyckoffa — Dow Jones, Nasdaq-100, S&amp;P 500. Działa w przeglądarce, bez instalacji.</p>
+</header>
+
+<main>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="scanner">Skaner</button>
+  <button class="tab" data-tab="journal">Dziennik <span class="tab-count" id="journal-count">0</span></button>
+</nav>
+
+<div id="tab-scanner">
+
+<!-- ============ CONFIG PANEL ============ -->
+<section class="panel" id="config-panel">
+  <h2>Konfiguracja</h2>
+
+  <div class="config-grid">
+    <div class="field">
+      <label>NAV portfela (USD)</label>
+      <input type="number" id="nav" value="550000" min="1000" step="1000">
+    </div>
+    <div class="field">
+      <label>Ryzyko / trade (%)</label>
+      <input type="number" id="risk" value="1" min="0.1" max="10" step="0.1">
+    </div>
+    <div class="field">
+      <label>Min R:R (TP2)</label>
+      <input type="number" id="minrr" value="3" min="1" step="0.5">
+    </div>
+    <div class="field">
+      <label>Min score (0-100)</label>
+      <input type="number" id="minscore" value="60" min="0" max="100" step="5">
+    </div>
+  </div>
+
+  <div class="config-grid">
+    <div class="field">
+      <label>Uniwersum</label>
+      <select id="universe">
+        <option value="DJ30">Dow Jones 30 (~10 sek)</option>
+        <option value="NDX">Nasdaq-100 (~30 sek)</option>
+        <option value="COMBO" selected>DJ + Nasdaq-100 (~40 sek)</option>
+        <option value="SP500">S&amp;P 500 (~2-3 min)</option>
+        <option value="ALL">DJ + Nasdaq + S&amp;P 500 (~3-4 min)</option>
+        <option value="CUSTOM">Własna lista tickerów…</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Źródło danych</label>
+      <select id="source">
+        <option value="stooq" selected>Stooq (darmowe, via CORS-proxy)</option>
+        <option value="twelvedata">Twelve Data (zalecane, darmowy klucz API)</option>
+        <option value="csv">Upload plików CSV (offline)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Klucz Twelve Data (opcjonalnie)</label>
+      <input type="password" id="tdkey" placeholder="puste = nie używa Twelve Data">
+    </div>
+    <div class="field">
+      <label>Klucz Finnhub — news (opcjonalnie)</label>
+      <input type="password" id="finkey" placeholder="puste = bez warstwy news">
+    </div>
+  </div>
+
+  <div id="custom-tickers-row" class="config-grid hidden">
+    <div class="field" style="grid-column: 1 / -1;">
+      <label>Lista tickerów (oddziel przecinkami lub spacjami)</label>
+      <textarea id="custom-tickers" placeholder="AAPL, MSFT, NVDA, TSLA, AMD, ..."></textarea>
+    </div>
+  </div>
+
+  <div id="csv-upload-row" class="config-grid hidden">
+    <div class="field" style="grid-column: 1 / -1;">
+      <label>Pliki CSV (Date, Open, High, Low, Close, Volume)</label>
+      <input type="file" id="csv-files" multiple accept=".csv,.txt">
+      <div class="sub">Nazwa pliku = ticker (np. <code>AAPL.csv</code>). Pobierz CSV ze Stooq, Yahoo Finance, lub innego źródła.</div>
+    </div>
+  </div>
+
+  <div class="row center">
+    <button class="btn primary" id="scan-btn">Skanuj</button>
+    <button class="btn danger hidden" id="stop-btn">Stop</button>
+    <button class="btn ghost" id="test-btn">Test sieci</button>
+    <button class="btn ghost" id="export-btn" disabled>Eksport CSV</button>
+    <button class="btn ghost" id="save-btn" disabled>Zapisz raport HTML</button>
+    <label class="row" style="margin-left: auto; font-size: 13px; color: #a8b5c8;">
+      <input type="checkbox" id="notify"> Powiadomienia desktop dla nowych sygnałów
+    </label>
+    <label class="row" style="font-size: 13px; color: #a8b5c8;">
+      Auto-scan codziennie o
+      <input type="time" id="daily-time" value="" style="background:#131a22;border:1px solid #2e3a4a;color:#eceff4;padding:4px 6px;border-radius:4px;font-family:inherit;font-size:13px;">
+      <span style="font-size: 11px; color: #6b7a8c;">(puste = wyłączone)</span>
+    </label>
+    <label class="row" style="font-size: 13px; color: #a8b5c8;">
+      lub co
+      <input type="number" id="rescan-min" value="0" min="0" max="1440" style="width: 60px; padding: 4px 6px;">
+      min
+    </label>
+  </div>
+
+  <div id="config-msg"></div>
+</section>
+
+<!-- ============ PROGRESS ============ -->
+<section class="panel hidden" id="progress-panel">
+  <h2>Postęp skanowania</h2>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
+    <div class="progress-text" id="progress-text">0 / 0</div>
+  </div>
+  <div class="row">
+    <span style="font-size: 13px; color: #a8b5c8;">Znaleziono sygnałów:</span>
+    <b id="found-count" style="color: #a3be8c;">0</b>
+    <span style="font-size: 13px; color: #a8b5c8;">·</span>
+    <span style="font-size: 13px; color: #a8b5c8;" id="time-elapsed">0 sek</span>
+  </div>
+  <div class="log" id="log"></div>
+</section>
+
+<!-- ============ SIGNALS ============ -->
+<section id="signals-section" class="hidden">
+  <div class="signals-header">
+    <h2 id="signals-title">Sygnały Wyckoff Spring</h2>
+    <div class="sub" id="scan-summary"></div>
+  </div>
+  <div id="signals"></div>
+</section>
+
+</div><!-- /tab-scanner -->
+
+<!-- ============ JOURNAL TAB ============ -->
+<div id="tab-journal" class="hidden">
+
+  <section class="panel">
+    <h2>Statystyki skuteczności (5d / 2tyg / 1mc)</h2>
+    <div class="tool-row">
+      <button class="btn primary" id="evaluate-btn">Aktualizuj wyniki</button>
+      <button class="btn ghost" id="journal-export">Eksport JSON</button>
+      <label class="btn-file">
+        Import JSON
+        <input type="file" id="journal-import" accept=".json,application/json" hidden>
+      </label>
+      <button class="btn danger" id="journal-clear">Wyczyść dziennik</button>
+      <span id="journal-status" style="font-size: 13px; color: #a8b5c8; margin-left: auto;"></span>
+    </div>
+    <div class="stats-grid" id="stats-overview"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Skuteczność według setup score (walidacja "80%")</h2>
+    <p style="font-size: 12px; color: #a8b5c8; margin: 0 0 12px;">
+      Czy wyższy score = wyższa skuteczność? Sprawdź empirycznie. Im więcej wpisów, tym wiarygodniejszy wynik. Dla solidnego oszacowania zbierz min. 30 wpisów na bucket.
+    </p>
+    <div id="score-buckets"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Wszystkie wpisy w dzienniku</h2>
+    <div class="tool-row">
+      <input type="search" id="journal-search" placeholder="Filtruj po tickerze…" style="min-width: 180px;">
+      <select id="journal-horizon">
+        <option value="d5">Wyniki: 5 dni handlowych</option>
+        <option value="d10" selected>Wyniki: 2 tygodnie (10d)</option>
+        <option value="d21">Wyniki: 1 miesiąc (21d)</option>
+      </select>
+      <select id="journal-filter">
+        <option value="all">Wszystkie</option>
+        <option value="wins">Tylko TP1/TP2 hit</option>
+        <option value="losses">Tylko stop loss</option>
+        <option value="open">Tylko otwarte / pending</option>
+      </select>
+      <span id="journal-table-status" style="font-size: 13px; color: #6b7a8c; margin-left: auto;"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="journal-table" id="journal-table"></table>
+    </div>
+  </section>
+
+</div><!-- /tab-journal -->
+
+</main>
+
+<footer class="bottom">
+  Wyckoff Spring Scanner · Dane: Stooq.com / Twelve Data · News: Finnhub<br>
+  <i>Nie jest to porada inwestycyjna. Score 0–100 jest heurystyczny, a nie historyczną win-rate.
+  Zwaliduj backtestem zanim podstawisz kapitał.</i>
+</footer>
+
+<script>
+"use strict";
+
+// ===========================================================================
+//  TICKER UNIVERSE
+// ===========================================================================
+const TICKERS = {
+  DJ30: "AAPL AMGN AXP BA CAT CRM CSCO CVX DIS DOW GS HD HON IBM JNJ JPM KO MCD MMM MRK MSFT NKE NVDA PG SHW TRV UNH V VZ WMT".split(/\s+/),
+
+  NDX: "AAPL ABNB ADBE ADI ADP ADSK AEP AMAT AMD AMGN AMZN ANSS APP ARM ASML AVGO AZN BIIB BKNG BKR CCEP CDNS CDW CEG CHTR CMCSA COST CPRT CRWD CSCO CSGP CSX CTAS CTSH DASH DDOG DLTR DXCM EA EXC FANG FAST FTNT GEHC GFS GILD GOOG GOOGL HON IDXX INTC INTU ISRG KDP KHC KLAC LIN LRCX LULU MAR MCHP MDB MDLZ MELI META MNST MRVL MSFT MU NFLX NVDA NXPI ODFL ON ORLY PANW PAYX PCAR PDD PEP PYPL QCOM REGN ROP ROST SBUX SMCI SNPS TEAM TMUS TSLA TTD TTWO TXN VRSK VRTX WBD WDAY XEL ZS".split(/\s+/),
+
+  // S&P 500 — embedded list (current as of January 2026; may drift over time)
+  SP500: ("A AAL AAPL ABBV ABNB ABT ACGL ACN ADBE ADI ADM ADP ADSK AEE AEP AES AFL AIG AIZ AJG AKAM ALB ALGN ALL ALLE AMAT AMCR AMD AME AMGN AMP AMT AMZN ANET ANSS AON AOS APA APD APH APO APTV ARE ATO AVB AVGO AVY AWK AXON AXP AZO BA BAC BALL BAX BBY BDX BEN BF-B BG BIIB BIO BK BKNG BKR BLDR BLK BMY BR BRK-B BRO BSX BWA BX BXP C CAG CAH CARR CAT CB CBOE CBRE CCI CCL CDNS CDW CE CEG CF CFG CHD CHRW CHTR CI CINF CL CLX CMCSA CME CMG CMI CMS CNC CNP COF COIN COO COP COR COST CPAY CPB CPRT CPT CRL CRM CRWD CSCO CSGP CSX CTAS CTLT CTRA CTSH CTVA CVS CVX CZR D DAL DAY DD DE DECK DELL DFS DG DGX DHI DHR DIS DLR DLTR DOC DOV DOW DPZ DRI DTE DUK DVA DVN DXCM EA EBAY ECL ED EFX EG EIX EL ELV EMN EMR ENPH EOG EPAM EQIX EQR EQT ERIE ES ESS ETN ETR EVRG EW EXC EXPD EXPE EXR F FANG FAST FCX FDS FDX FE FFIV FI FICO FIS FITB FMC FOX FOXA FRT FSLR FTNT FTV GD GDDY GE GEHC GEN GEV GILD GIS GL GLW GM GNRC GOOG GOOGL GPC GPN GRMN GS GWW HAL HAS HBAN HCA HD HES HIG HII HLT HOLX HON HPE HPQ HRL HSIC HST HSY HUBB HUM HWM IBM ICE IDXX IEX IFF INCY INTC INTU INVH IP IPG IQV IR IRM ISRG IT ITW IVZ J JBHT JBL JCI JKHY JNJ JNPR JPM K KDP KEY KEYS KHC KIM KKR KLAC KMB KMI KMX KO KR KVUE L LDOS LEN LH LHX LIN LKQ LLY LMT LNT LOW LRCX LULU LUV LVS LW LYB LYV MA MAA MAR MAS MCD MCHP MCK MCO MDLZ MDT MET META MGM MHK MKC MKTX MLM MMC MMM MNST MO MOH MOS MPC MPWR MRK MRNA MRO MS MSCI MSFT MSI MTB MTCH MTD MU NCLH NDAQ NDSN NEE NEM NFLX NI NKE NOC NOW NRG NSC NTAP NTRS NUE NVDA NVR NWS NWSA NXPI O ODFL OKE OMC ON ORCL ORLY OTIS OXY PANW PARA PAYC PAYX PCAR PCG PEG PEP PFE PFG PG PGR PH PHM PKG PLD PLTR PM PNC PNR PNW PODD POOL PPG PPL PRU PSA PSX PTC PWR PYPL QCOM QRVO RCL REG REGN RF RJF RL RMD ROK ROL ROP ROST RSG RTX RVTY SBAC SBUX SCHW SHW SJM SLB SMCI SNA SNPS SO SOLV SPG SPGI SRE STE STLD STT STX STZ SW SWK SWKS SYF SYK SYY T TAP TDG TDY TEL TER TFC TFX TGT TJX TKO TMO TMUS TPL TPR TRGP TRMB TROW TRV TSCO TSLA TSN TT TTWO TXN TXT TYL UAL UBER UDR UHS ULTA UNH UNP UPS URI USB V VICI VLO VLTO VMC VRSK VRSN VRTX VST VTR VTRS VZ WAB WAT WBA WBD WDC WEC WELL WFC WM WMB WMT WRB WST WTW WY WYNN XEL XOM XYL YUM ZBH ZBRA ZTS".split(/\s+/)),
+};
+
+const COMBO_KEYS = {
+  DJ30: ["DJ30"],
+  NDX: ["NDX"],
+  COMBO: ["DJ30", "NDX"],
+  SP500: ["SP500"],
+  ALL: ["DJ30", "NDX", "SP500"],
+};
+
+function buildUniverse(key) {
+  if (key === "CUSTOM") {
+    const raw = document.getElementById("custom-tickers").value;
+    return [...new Set(raw.split(/[\s,;]+/).map(t => t.trim().toUpperCase()).filter(Boolean))];
+  }
+  const keys = COMBO_KEYS[key] || ["DJ30"];
+  const set = new Set();
+  for (const k of keys) for (const t of TICKERS[k]) set.add(t);
+  return [...set].sort();
+}
+
+// ===========================================================================
+//  WYCKOFF MATH (port of Python wyckoff.py)
+// ===========================================================================
+const W = {
+  MIN_BARS: 365, TR_WINDOW: 120, TR_EXCLUDE_RECENT: 3,
+  SPRING_SCAN_WINDOW: 5, SPRING_MUST_BE_WITHIN: 3,
+  ATR_PERIOD: 14, VOL_AVG_PERIOD: 30,
+  MIN_TR_WIDTH_PCT: 0.05, MAX_TR_TREND_PCT: 0.15,
+  MIN_PENETRATION_PCT: 0.002, MAX_PENETRATION_PCT: 0.08,
+};
+
+function quantile(arr, q) {
+  const s = [...arr].sort((a, b) => a - b);
+  const pos = (s.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  return s[base + 1] !== undefined ? s[base] + rest * (s[base + 1] - s[base]) : s[base];
+}
+
+function linearSlope(ys) {
+  const n = ys.length;
+  let sx = 0, sy = 0, sxy = 0, sx2 = 0;
+  for (let i = 0; i < n; i++) {
+    sx += i; sy += ys[i]; sxy += i * ys[i]; sx2 += i * i;
+  }
+  return (n * sxy - sx * sy) / (n * sx2 - sx * sx);
+}
+
+function atrSeries(bars, period) {
+  const trs = [];
+  for (let i = 0; i < bars.length; i++) {
+    if (i === 0) {
+      trs.push(bars[i].high - bars[i].low);
+    } else {
+      const hl = bars[i].high - bars[i].low;
+      const hc = Math.abs(bars[i].high - bars[i - 1].close);
+      const lc = Math.abs(bars[i].low  - bars[i - 1].close);
+      trs.push(Math.max(hl, hc, lc));
+    }
+  }
+  const out = [];
+  for (let i = 0; i < trs.length; i++) {
+    if (i < period - 1) { out.push(null); continue; }
+    let sum = 0;
+    for (let j = i - period + 1; j <= i; j++) sum += trs[j];
+    out.push(sum / period);
+  }
+  return out;
+}
+
+function identifyTradingRange(bars) {
+  const end = bars.length - W.TR_EXCLUDE_RECENT;
+  const start = end - W.TR_WINDOW;
+  if (start < 0) return null;
+  const win = bars.slice(start, end);
+  if (win.length < 30) return null;
+
+  const support = quantile(win.map(b => b.low), 0.05);
+  const resistance = quantile(win.map(b => b.high), 0.95);
+  const height = resistance - support;
+  const midpoint = (support + resistance) / 2;
+  const heightPct = midpoint > 0 ? height / midpoint : 0;
+  if (heightPct < W.MIN_TR_WIDTH_PCT) return null;
+
+  const closes = win.map(b => b.close);
+  const slope = linearSlope(closes);
+  const totalMovePct = closes[0] > 0 ? (slope * closes.length) / closes[0] : 0;
+  if (Math.abs(totalMovePct) > W.MAX_TR_TREND_PCT) return null;
+
+  return { support, resistance, midpoint, height, heightPct, nBars: win.length };
+}
+
+function scoreSpring(bar, tr, avgVol, ft) {
+  let score = 0;
+  const pen = (tr.support - bar.low) / tr.support;
+  if (pen >= 0.002 && pen <= 0.03) score += 35;
+  else if (pen <= 0.05) score += 22;
+  else if (pen <= 0.08) score += 12;
+  if (bar.close > tr.support) score += 15;
+  const r = bar.high - bar.low;
+  const cp = r > 0 ? (bar.close - bar.low) / r : 0;
+  if (cp >= 0.7) score += 15;
+  else if (cp >= 0.5) score += 8;
+  if (bar.close > bar.open) score += 10;
+  const vr = avgVol > 0 ? bar.volume / avgVol : 0;
+  if (vr >= 1.5) score += 15;
+  else if (vr >= 1.0) score += 10;
+  else if (vr >= 0.7) score += 5;
+  if (ft === true) score += 10;
+  else if (ft === false) score -= 5;
+  return Math.max(0, Math.min(100, score));
+}
+
+function detectSpring(bars, tr, minScore) {
+  const volTail = bars.slice(-W.VOL_AVG_PERIOD).map(b => b.volume);
+  const avgVol = volTail.reduce((a, b) => a + b, 0) / volTail.length;
+  if (avgVol <= 0) return null;
+  const lastN = bars.slice(-W.SPRING_SCAN_WINDOW);
+  const lastIdx = bars.length - 1;
+  let best = null;
+  for (let i = 0; i < lastN.length; i++) {
+    const bar = lastN[i];
+    if (bar.low >= tr.support) continue;
+    const pen = (tr.support - bar.low) / tr.support;
+    if (pen < W.MIN_PENETRATION_PCT || pen > W.MAX_PENETRATION_PCT) continue;
+    if (bar.close < tr.support * 0.997) continue;
+    const sp = lastIdx - (lastN.length - 1 - i);
+    const ft = sp < bars.length - 1 ? bars[sp + 1].close > bar.close : null;
+    const score = scoreSpring(bar, tr, avgVol, ft);
+    const r = bar.high - bar.low;
+    const cp = r > 0 ? (bar.close - bar.low) / r : 0;
+    const cand = {
+      barDate: bar.date, barLow: bar.low, barClose: bar.close,
+      barOpen: bar.open, barHigh: bar.high, barVolume: bar.volume,
+      avgVolume30: Math.round(avgVol), volumeRatio: bar.volume / avgVol,
+      penetrationPct: pen * 100, closePosition: cp,
+      followThrough: ft, barsSince: bars.length - 1 - sp, score: score,
+    };
+    if (!best || cand.score > best.score) best = cand;
+  }
+  if (!best || best.score < minScore) return null;
+  if (best.barsSince > W.SPRING_MUST_BE_WITHIN) return null;
+  return best;
+}
+
+function round(n, d) { const m = Math.pow(10, d); return Math.round(n * m) / m; }
+
+function buildSignal(ticker, bars, tr, spring, cfg) {
+  const last = bars[bars.length - 1];
+  const entry = last.close;
+  const atrs = atrSeries(bars, W.ATR_PERIOD);
+  const atrVal = atrs[atrs.length - 1];
+  const buffer = Math.max(0.5 * atrVal, entry * 0.005);
+  const sl = spring.barLow - buffer;
+  const risk = entry - sl;
+  if (risk <= 0) return null;
+  const tp1 = tr.resistance;
+  const tp2 = tr.resistance + tr.height;
+  const rr1 = (tp1 - entry) / risk;
+  const rr2 = (tp2 - entry) / risk;
+  if (rr2 < cfg.minRr) return null;
+  const riskUsd = cfg.navUsd * cfg.riskPct / 100;
+  const shares = Math.floor(riskUsd / risk);
+  if (shares <= 0) return null;
+  const positionValue = shares * entry;
+  const capitalAtRisk = shares * risk;
+  let pct1d = 0, volPrev = 0;
+  if (bars.length >= 2) {
+    const prev = bars[bars.length - 2];
+    pct1d = (entry - prev.close) / prev.close * 100;
+    volPrev = prev.volume > 0 ? (last.volume - prev.volume) / prev.volume * 100 : 0;
+  }
+  const v30 = bars.slice(-30).map(b => b.volume).reduce((a, b) => a + b, 0) / 30;
+  const volAvg = v30 > 0 ? (last.volume - v30) / v30 * 100 : 0;
+
+  return {
+    ticker, name: ticker, sector: "",
+    scanDate: new Date().toISOString().slice(0, 10),
+    price: round(entry, 2),
+    pctChange1d: round(pct1d, 2),
+    volume: last.volume,
+    volChangeVsPrevPct: round(volPrev, 1),
+    volChangeVsAvg30Pct: round(volAvg, 1),
+    entry: round(entry, 2),
+    sl: round(sl, 2),
+    tp1: round(tp1, 2),
+    tp2: round(tp2, 2),
+    riskPerShare: round(risk, 2),
+    rr1: round(rr1, 2),
+    rr2: round(rr2, 2),
+    shares: shares,
+    positionValueUsd: round(positionValue, 2),
+    capitalAtRiskUsd: round(capitalAtRisk, 2),
+    springDate: spring.barDate,
+    springLow: round(spring.barLow, 2),
+    springClose: round(spring.barClose, 2),
+    springVolume: spring.barVolume,
+    springVolumeRatio: round(spring.volumeRatio, 2),
+    penetrationPct: round(spring.penetrationPct, 2),
+    followThrough: spring.followThrough,
+    barsSinceSpring: spring.barsSince,
+    setupScore: spring.score,
+    trSupport: round(tr.support, 2),
+    trResistance: round(tr.resistance, 2),
+    trHeightPct: round(tr.heightPct * 100, 2),
+    story: null,
+  };
+}
+
+function analyze(ticker, bars, cfg) {
+  if (!bars || bars.length < W.MIN_BARS) return null;
+  const tr = identifyTradingRange(bars);
+  if (!tr) return null;
+  const spring = detectSpring(bars, tr, cfg.minScore);
+  if (!spring) return null;
+  return buildSignal(ticker, bars, tr, spring, cfg);
+}
+
+// ===========================================================================
+//  DATA FETCHERS
+// ===========================================================================
+function parseCsv(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error("brak danych");
+  const header = lines[0].split(",").map(s => s.trim().toLowerCase());
+  const idx = name => header.findIndex(h => h === name || h === name.replace(/ /g, ""));
+  const di = idx("date"), oi = idx("open"), hi = idx("high"),
+        li = idx("low"), ci = idx("close"), vi = idx("volume");
+  if ([di, oi, hi, li, ci, vi].some(i => i < 0)) {
+    throw new Error("CSV brak kolumn Date/Open/High/Low/Close/Volume");
+  }
+  const bars = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(",");
+    const b = {
+      date: c[di],
+      open: parseFloat(c[oi]),
+      high: parseFloat(c[hi]),
+      low: parseFloat(c[li]),
+      close: parseFloat(c[ci]),
+      volume: parseInt(c[vi], 10),
+    };
+    if (!isNaN(b.close) && !isNaN(b.volume) && b.volume >= 0) bars.push(b);
+  }
+  return bars;
+}
+
+// Stooq.com does NOT send CORS headers, so direct browser fetches are blocked.
+// We try direct first (works in some setups) then fall back to public CORS proxies.
+// The first method that works is cached for the rest of this scan.
+const CORS_PROXIES = [
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
+];
+let stooqMethod = null; // null = probe; otherwise "direct" or "proxy:N"
+
+async function fetchStooq(ticker) {
+  const url = `https://stooq.com/q/d/l/?s=${ticker.toLowerCase()}.us&i=d`;
+  // Direct fetch is blocked (Stooq sends no CORS headers) — always route
+  // through one of the public CORS proxies.
+  const methods = stooqMethod
+    ? [stooqMethod]
+    : ["proxy:0", "proxy:1", "proxy:2"];
+
+  let networkErr = null;
+  for (const m of methods) {
+    let resp;
+    try {
+      const target = CORS_PROXIES[parseInt(m.slice(6), 10)](url);
+      resp = await fetch(target);
+    } catch (e) {
+      networkErr = e;
+      continue; // try next method
+    }
+    if (!resp.ok) {
+      networkErr = new Error(`HTTP ${resp.status}`);
+      continue;
+    }
+    const text = await resp.text();
+    // This method works (regardless of per-ticker outcome) — cache it.
+    if (!stooqMethod) stooqMethod = m;
+    if (text.length < 50 ||
+        text.toLowerCase().includes("<html") ||
+        text.toLowerCase().includes("brak danych")) {
+      throw new Error("brak danych");
+    }
+    return parseCsv(text);
+  }
+  // All methods failed — reset so we re-probe next time.
+  if (stooqMethod) stooqMethod = null;
+  throw new Error("Stooq nieosiągalny (CORS/firewall)");
+}
+
+async function fetchTwelveData(ticker, key) {
+  if (!key) throw new Error("brak klucza Twelve Data");
+  const url = `https://api.twelvedata.com/time_series?symbol=${ticker}&interval=1day&outputsize=500&apikey=${key}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.status === "error") throw new Error(j.message || "API error");
+  const v = j.values || [];
+  if (v.length === 0) throw new Error("brak danych");
+  // Twelve Data returns newest first; reverse to chronological
+  return v.slice().reverse().map(x => ({
+    date: x.datetime,
+    open: parseFloat(x.open), high: parseFloat(x.high),
+    low: parseFloat(x.low), close: parseFloat(x.close),
+    volume: parseInt(x.volume || "0", 10),
+  })).filter(b => !isNaN(b.close));
+}
+
+// CSV upload: pre-load files into memory keyed by ticker
+const csvCache = {};
+async function loadCsvFiles(fileList) {
+  for (const f of fileList) {
+    const ticker = f.name.replace(/\.(csv|txt)$/i, "").toUpperCase();
+    const text = await f.text();
+    try { csvCache[ticker] = parseCsv(text); }
+    catch (e) { log(`${ticker}: ${e.message}`, "err"); }
+  }
+}
+async function fetchFromCsv(ticker) {
+  const bars = csvCache[ticker];
+  if (!bars) throw new Error("brak pliku CSV");
+  return bars;
+}
+
+// ===========================================================================
+//  CONNECTIVITY TEST — probes each data source to tell the user
+//  what actually works from their network.
+// ===========================================================================
+async function _probeUrl(url, validateBody) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok && r.status !== 401 && r.status !== 403) {
+      return { ok: false, reason: `HTTP ${r.status}` };
+    }
+    if (validateBody) {
+      const text = await r.text();
+      if (!validateBody(text)) return { ok: false, reason: "nieprawidłowa odpowiedź" };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: e.message || "network error" };
+  }
+}
+
+async function testConnectivity() {
+  const out = $("config-msg");
+  out.innerHTML = '<div class="callout">Testuję połączenia (~10 sek)…</div>';
+  $("test-btn").disabled = true;
+
+  const tdKey = $("tdkey").value.trim();
+  const finKey = $("finkey").value.trim();
+
+  const stooqUrl = "https://stooq.com/q/d/l/?s=aapl.us&i=d";
+  const proxyNames = ["corsproxy.io", "allorigins.win", "codetabs.com"];
+  const validateStooqCsv = t => t && t.length > 100 &&
+    !t.toLowerCase().includes("<html") && !t.toLowerCase().includes("brak danych");
+
+  // Probe in parallel, then label per source
+  const probes = [
+    ...CORS_PROXIES.map((fn, i) =>
+      ["Stooq przez " + proxyNames[i], _probeUrl(fn(stooqUrl), validateStooqCsv)]),
+    ["Twelve Data API",
+      _probeUrl(`https://api.twelvedata.com/time_series?symbol=AAPL&interval=1day&outputsize=5&apikey=${tdKey || "demo"}`,
+        t => { try { const j = JSON.parse(t); return j.status !== "error" || /api key/i.test(j.message || ""); } catch { return false; } })],
+    ["Finnhub API",
+      _probeUrl(`https://finnhub.io/api/v1/quote?symbol=AAPL&token=${finKey || "demo"}`,
+        t => { try { const j = JSON.parse(t); return j && (j.c !== undefined || j.error); } catch { return false; } })],
+  ];
+
+  const results = [];
+  for (const [name, promise] of probes) {
+    const r = await promise;
+    results.push({ name, ...r });
+  }
+
+  // Decide recommendation
+  const stooqWorks = results.slice(0, 3).some(r => r.ok);
+  const tdWorks = results[3].ok;
+  const finWorks = results[4].ok;
+
+  let recommendation;
+  if (tdWorks) {
+    recommendation = tdKey
+      ? `<b>Twelve Data działa.</b> Wybierz "Twelve Data" w Źródło danych i skanuj.`
+      : `<b>Twelve Data jest dostępne</b> z Twojej sieci. Zarejestruj się na <a href="https://twelvedata.com/register" target="_blank" rel="noopener" style="color:#88c0d0">twelvedata.com</a> (30 sek), wklej klucz w polu wyżej, zmień Źródło na "Twelve Data".`;
+  } else if (stooqWorks) {
+    const which = results.slice(0, 3).findIndex(r => r.ok);
+    recommendation = `<b>Stooq przez ${proxyNames[which]} działa.</b> Możesz skanować od razu — Stooq już domyślnie używa proxy.`;
+  } else {
+    recommendation = `<b>Wszystkie zewnętrzne API zablokowane.</b> Jedyna ścieżka: <b>upload plików CSV</b>. Pobierz CSV w domu / na telefonie ze <a href="https://stooq.com" target="_blank" rel="noopener" style="color:#88c0d0">stooq.com</a> lub Yahoo Finance, skopiuj na firmowy komputer, wybierz "Upload plików CSV" w Źródle danych.`;
+  }
+
+  out.innerHTML = `
+    <div class="callout" style="border-left-color: ${stooqWorks || tdWorks ? '#a3be8c' : '#bf616a'}; background: ${stooqWorks || tdWorks ? '#1e2e22' : '#2e1919'}; color: ${stooqWorks || tdWorks ? '#a3be8c' : '#d8a4a8'};">
+      <b>Wyniki testu sieci:</b>
+      ${results.map(r =>
+        `<div style="font-family: monospace; font-size: 12px; padding: 2px 0;">
+          ${r.ok ? '✓' : '✗'} ${r.name}: <b>${r.ok ? 'DOSTĘPNE' : 'ZABLOKOWANE'}</b>${r.reason ? ` (${r.reason})` : ''}
+        </div>`).join("")}
+      <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+        ${recommendation}
+      </div>
+    </div>
+  `;
+  $("test-btn").disabled = false;
+}
+
+// ===========================================================================
+//  FINNHUB STORY
+// ===========================================================================
+const CATALYSTS = {
+  "earnings beat": ["beats", "beat", "tops estimate", "exceeds"],
+  "guidance raise": ["raises guidance", "raises outlook", "raises forecast"],
+  "analyst upgrade": ["upgrade", "overweight", "outperform", "raises price target", "raised price target", "buy rating"],
+  "M&A activity": ["acquir", "merger", "buyout", "takeover", "stake"],
+  "product/launch": ["launch", "approval", "fda", "patent", "breakthrough", "partnership", "contract win"],
+  "insider buying": ["insider buy", "insider purchase", "ceo buys"],
+  "dividend/buyback": ["dividend hike", "buyback", "share repurchase"],
+};
+
+async function finnhub(path, params, key) {
+  const url = new URL("https://finnhub.io/api/v1" + path);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.set("token", key);
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  return r.json();
+}
+
+function isoDate(d) { return d.toISOString().slice(0, 10); }
+
+async function fetchStory(ticker, key) {
+  const end = new Date();
+  const start21 = new Date(end - 21 * 86400000);
+  const start90 = new Date(end - 90 * 86400000);
+  const start120 = new Date(end - 120 * 86400000);
+  const end90 = new Date(end.getTime() + 90 * 86400000);
+
+  // Parallel fetch
+  const [news, earnings, insider, recom] = await Promise.all([
+    finnhub("/company-news", { symbol: ticker, from: isoDate(start21), to: isoDate(end) }, key).catch(() => []),
+    finnhub("/calendar/earnings", { symbol: ticker, from: isoDate(start120), to: isoDate(end90) }, key).catch(() => null),
+    finnhub("/stock/insider-transactions", { symbol: ticker, from: isoDate(start90), to: isoDate(end) }, key).catch(() => null),
+    finnhub("/stock/recommendation", { symbol: ticker }, key).catch(() => null),
+  ]);
+
+  const story = {
+    catalysts: new Set(), headlines: [],
+    upcomingEarnings: null, lastSurprisePct: null,
+    insiderNet90d: null, analystBuyPct: null,
+  };
+
+  if (Array.isArray(news)) {
+    for (const n of news.slice(0, 25)) {
+      const h = (n.headline || "").trim();
+      if (!h) continue;
+      const lower = h.toLowerCase();
+      for (const [cat, kws] of Object.entries(CATALYSTS))
+        if (kws.some(kw => lower.includes(kw))) story.catalysts.add(cat);
+      story.headlines.push({
+        date: new Date((n.datetime || 0) * 1000).toISOString().slice(0, 10),
+        source: n.source || "",
+        headline: h,
+        url: n.url || "",
+      });
+    }
+  }
+  story.headlines = story.headlines.slice(0, 8);
+
+  if (earnings && earnings.earningsCalendar) {
+    const arr = earnings.earningsCalendar;
+    const past = arr.filter(e => e.epsActual != null);
+    const upcoming = arr.filter(e => e.epsActual == null);
+    if (past.length) {
+      const latest = past.sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
+      if (latest.epsEstimate && latest.epsActual != null) {
+        const surprise = (latest.epsActual - latest.epsEstimate) / Math.abs(latest.epsEstimate) * 100;
+        story.lastSurprisePct = surprise;
+        if (surprise > 3) story.catalysts.add("earnings beat");
+      }
+    }
+    if (upcoming.length) {
+      story.upcomingEarnings = upcoming.sort((a, b) => (a.date || "").localeCompare(b.date || ""))[0].date;
+    }
+  }
+
+  if (Array.isArray(insider) && insider.data) {
+    const net = insider.data.reduce((s, i) => s + (i.change || 0), 0);
+    story.insiderNet90d = net;
+    if (net > 0) story.catalysts.add("insider buying");
+  } else if (Array.isArray(insider)) {
+    const net = insider.reduce((s, i) => s + (i.change || 0), 0);
+    story.insiderNet90d = net;
+    if (net > 0) story.catalysts.add("insider buying");
+  }
+
+  if (Array.isArray(recom) && recom.length) {
+    const latest = recom.sort((a, b) => (b.period || "").localeCompare(a.period || ""))[0];
+    const t = (latest.strongBuy || 0) + (latest.buy || 0) + (latest.hold || 0) + (latest.sell || 0) + (latest.strongSell || 0);
+    if (t > 0) {
+      story.analystBuyPct = ((latest.strongBuy || 0) + (latest.buy || 0)) / t * 100;
+      if (story.analystBuyPct >= 70) story.catalysts.add("analyst upgrade");
+    }
+  }
+
+  story.catalysts = [...story.catalysts].sort();
+  return story;
+}
+
+function storySummary(s) {
+  if (!s) return "";
+  const parts = [];
+  if (s.catalysts && s.catalysts.length) parts.push("Catalysts: " + s.catalysts.join(", "));
+  if (s.lastSurprisePct != null) {
+    const sign = s.lastSurprisePct > 0 ? "+" : "";
+    parts.push(`Last EPS surprise ${sign}${s.lastSurprisePct.toFixed(1)}%`);
+  }
+  if (s.upcomingEarnings) parts.push(`Next earnings: ${s.upcomingEarnings}`);
+  if (s.insiderNet90d && s.insiderNet90d > 0) parts.push(`Insiders net BUY ${s.insiderNet90d.toLocaleString()} sh (90d)`);
+  else if (s.insiderNet90d && s.insiderNet90d < 0) parts.push(`Insiders net SELL ${Math.abs(s.insiderNet90d).toLocaleString()} sh (90d)`);
+  if (s.analystBuyPct != null && s.analystBuyPct >= 60) parts.push(`Analysts ${s.analystBuyPct.toFixed(0)}% buy-rated`);
+  return parts.length ? parts.join(" · ") : "No clear catalyst detected.";
+}
+
+// ===========================================================================
+//  CONCURRENCY
+// ===========================================================================
+class Limiter {
+  constructor(max, minIntervalMs = 0) {
+    this.max = max; this.minInterval = minIntervalMs;
+    this.active = 0; this.queue = []; this.lastStart = 0;
+  }
+  async run(fn) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ fn, resolve, reject });
+      this._dispatch();
+    });
+  }
+  _dispatch() {
+    while (this.active < this.max && this.queue.length) {
+      const since = Date.now() - this.lastStart;
+      if (this.minInterval && since < this.minInterval) {
+        setTimeout(() => this._dispatch(), this.minInterval - since);
+        return;
+      }
+      const { fn, resolve, reject } = this.queue.shift();
+      this.lastStart = Date.now();
+      this.active++;
+      Promise.resolve().then(fn).then(resolve, reject)
+        .finally(() => { this.active--; this._dispatch(); });
+    }
+  }
+}
+
+// ===========================================================================
+//  UI
+// ===========================================================================
+const $ = id => document.getElementById(id);
+let aborted = false;
+let scanInProgress = false;
+let currentSignals = [];
+let rescanTimer = null;
+
+function log(msg, cls = "") {
+  const el = $("log");
+  const entry = document.createElement("div");
+  entry.className = "log-entry " + cls;
+  const t = new Date().toLocaleTimeString();
+  entry.textContent = `[${t}] ${msg}`;
+  el.appendChild(entry);
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateProgress(done, total, found, startMs) {
+  const pct = total > 0 ? done / total * 100 : 0;
+  $("progress-fill").style.width = pct + "%";
+  $("progress-text").textContent = `${done} / ${total} (${pct.toFixed(0)}%)`;
+  $("found-count").textContent = String(found);
+  const sec = Math.floor((Date.now() - startMs) / 1000);
+  $("time-elapsed").textContent = `${sec} sek`;
+}
+
+function rowClass(score) { return score >= 80 ? "prime" : (score >= 70 ? "good" : "ok"); }
+function ftBadge(ft) {
+  if (ft === true) return '<span class="badge badge-yes">✓ follow-through</span>';
+  if (ft === false) return '<span class="badge badge-no">brak follow-through</span>';
+  return '<span class="badge badge-pending">dziś</span>';
+}
+function esc(s) {
+  if (s == null) return "";
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function renderSignal(s) {
+  const story = s.story;
+  const catalysts = (story && story.catalysts && story.catalysts.length)
+    ? story.catalysts.map(c => `<span class="chip">${esc(c)}</span>`).join("")
+    : '<span class="chip chip-muted">brak wyraźnego katalizatora</span>';
+  const headlinesHtml = (story && story.headlines && story.headlines.length)
+    ? story.headlines.map(h =>
+        `<li><span class="news-date">${esc(h.date)}</span> ` +
+        `<a href="${esc(h.url)}" target="_blank" rel="noopener">${esc(h.headline)}</a> ` +
+        `<span class="news-src">— ${esc(h.source)}</span></li>`).join("")
+    : '<li class="muted">Brak newsów (uzupełnij klucz Finnhub, by widzieć).</li>';
+  const insiderStr = story && story.insiderNet90d != null
+    ? `${story.insiderNet90d > 0 ? "+" : ""}${story.insiderNet90d.toLocaleString()} sh`
+    : "";
+  const pctCol = s.pctChange1d >= 0 ? "pos" : "neg";
+  const volCol = s.volChangeVsAvg30Pct >= 0 ? "pos" : "neg";
+
+  const card = document.createElement("article");
+  card.className = "signal " + rowClass(s.setupScore);
+  card.innerHTML = `
+    <header class="sig-head">
+      <div>
+        <h3>${esc(s.ticker)} <small>${esc(s.name)}</small></h3>
+        <div class="sig-meta">
+          ${esc(s.sector || "—")} ·
+          Score <b>${s.setupScore}/100</b> ·
+          Spring ${esc(s.springDate)} (${s.barsSinceSpring}d temu) ·
+          ${ftBadge(s.followThrough)}
+        </div>
+      </div>
+      <div class="price-block">
+        <div class="price">$${s.price.toFixed(2)}</div>
+        <div class="delta ${pctCol}">${s.pctChange1d >= 0 ? "+" : ""}${s.pctChange1d.toFixed(2)}% d/d</div>
+      </div>
+    </header>
+    <section class="cell-grid">
+      <div class="cell"><div class="lbl">Entry</div><div class="val">$${s.entry.toFixed(2)}</div></div>
+      <div class="cell">
+        <div class="lbl">Stop loss</div>
+        <div class="val val-sl">$${s.sl.toFixed(2)}</div>
+        <div class="sub">−$${s.riskPerShare.toFixed(2)} / sh</div>
+      </div>
+      <div class="cell">
+        <div class="lbl">TP1 (top TR)</div>
+        <div class="val val-tp">$${s.tp1.toFixed(2)}</div>
+        <div class="sub">R:R ${s.rr1.toFixed(2)} : 1</div>
+      </div>
+      <div class="cell">
+        <div class="lbl">TP2 (measured move)</div>
+        <div class="val val-tp">$${s.tp2.toFixed(2)}</div>
+        <div class="sub">R:R <b>${s.rr2.toFixed(2)} : 1</b></div>
+      </div>
+      <div class="cell"><div class="lbl">Akcje</div><div class="val">${s.shares.toLocaleString()}</div></div>
+      <div class="cell"><div class="lbl">Wartość pozycji</div><div class="val">$${s.positionValueUsd.toLocaleString()}</div></div>
+      <div class="cell"><div class="lbl">Ryzyko kapitału</div><div class="val">$${s.capitalAtRiskUsd.toLocaleString()}</div></div>
+      <div class="cell">
+        <div class="lbl">Wolumen vs avg30</div>
+        <div class="val ${volCol}">${s.volChangeVsAvg30Pct >= 0 ? "+" : ""}${s.volChangeVsAvg30Pct.toFixed(1)}%</div>
+        <div class="sub">${s.volume.toLocaleString()}</div>
+      </div>
+    </section>
+    <section class="tr-block">
+      <div><b>Trading Range:</b> $${s.trSupport.toFixed(2)} — $${s.trResistance.toFixed(2)}  (${s.trHeightPct.toFixed(1)}% szerokości)</div>
+      <div><b>Spring:</b> low $${s.springLow.toFixed(2)} (penetracja ${s.penetrationPct.toFixed(2)}%), close $${s.springClose.toFixed(2)}, wolumen ${s.springVolumeRatio.toFixed(2)}× śr.</div>
+    </section>
+    <section class="story">
+      <h4>Story / catalyst</h4>
+      <div class="chips">${catalysts}</div>
+      <div style="font-size: 13px;">
+        <b>Summary:</b> ${esc(storySummary(story)) || "—"}<br>
+        ${story && story.upcomingEarnings ? `<b>Next earnings:</b> ${esc(story.upcomingEarnings)} · ` : ""}
+        ${story && story.lastSurprisePct != null ? `<b>Last EPS surprise:</b> ${story.lastSurprisePct >= 0 ? "+" : ""}${story.lastSurprisePct.toFixed(1)}% · ` : ""}
+        ${insiderStr ? `<b>Insider net 90d:</b> ${insiderStr} · ` : ""}
+        ${story && story.analystBuyPct != null ? `<b>Analysts buy-rated:</b> ${story.analystBuyPct.toFixed(0)}%` : ""}
+      </div>
+      <h4>Recent headlines</h4>
+      <ul class="news-list">${headlinesHtml}</ul>
+    </section>
+  `;
+  $("signals").appendChild(card);
+}
+
+function notify(s) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    new Notification(`Wyckoff Spring: ${s.ticker}`, {
+      body: `$${s.price.toFixed(2)} · R:R ${s.rr2.toFixed(2)} · score ${s.setupScore}/100`,
+    });
+  } catch (e) { /* ignore */ }
+}
+
+// ===========================================================================
+//  EXPORT
+// ===========================================================================
+function csvEscape(v) {
+  if (v == null) return "";
+  const s = String(v);
+  return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function exportCsv() {
+  if (!currentSignals.length) return;
+  const cols = ["ticker", "scanDate", "price", "pctChange1d", "volume",
+    "volChangeVsAvg30Pct", "entry", "sl", "tp1", "tp2", "rr1", "rr2",
+    "shares", "positionValueUsd", "capitalAtRiskUsd", "setupScore",
+    "springDate", "springLow", "penetrationPct", "followThrough",
+    "trSupport", "trResistance", "trHeightPct"];
+  const header = cols.join(",");
+  const rows = currentSignals.map(s => cols.map(c => csvEscape(s[c])).join(","));
+  const blob = new Blob([header + "\n" + rows.join("\n")], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `wyckoff_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function saveReport() {
+  if (!currentSignals.length) return;
+  const cards = $("signals").innerHTML;
+  const css = document.querySelector("style").innerHTML;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Wyckoff report ${new Date().toISOString().slice(0,16)}</title><style>${css}</style></head><body>
+    <header class="top"><h1>Wyckoff Spring — raport</h1><p>${new Date().toLocaleString("pl-PL")}</p></header>
+    <main>${cards}</main></body></html>`;
+  const blob = new Blob([html], { type: "text/html" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `wyckoff_report_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.html`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ===========================================================================
+//  MAIN SCAN
+// ===========================================================================
+async function runScan() {
+  if (scanInProgress) return;
+  scanInProgress = true;
+  aborted = false;
+  currentSignals = [];
+  $("signals").innerHTML = "";
+  $("log").innerHTML = "";
+  $("config-msg").innerHTML = "";
+  // Remove any leftover guidance banner from a prior scan
+  $("progress-panel").querySelectorAll(".callout.warn").forEach(n => n.remove());
+
+  const cfg = {
+    navUsd: parseFloat($("nav").value) || 0,
+    riskPct: parseFloat($("risk").value) || 1,
+    minRr: parseFloat($("minrr").value) || 3,
+    minScore: parseFloat($("minscore").value) || 60,
+    source: $("source").value,
+    tdKey: $("tdkey").value.trim(),
+    finKey: $("finkey").value.trim(),
+  };
+
+  const universe = buildUniverse($("universe").value);
+  if (!universe.length) {
+    $("config-msg").innerHTML = '<div class="callout warn">Brak tickerów do skanowania.</div>';
+    scanInProgress = false;
+    return;
+  }
+
+  $("scan-btn").classList.add("hidden");
+  $("stop-btn").classList.remove("hidden");
+  $("progress-panel").classList.remove("hidden");
+  $("signals-section").classList.remove("hidden");
+  $("signals-title").textContent = "Sygnały Wyckoff Spring (skanowanie…)";
+  $("scan-summary").textContent = "";
+
+  log(`Start. Uniwersum: ${universe.length} tickerów. Źródło: ${cfg.source}. NAV $${cfg.navUsd.toLocaleString()}, ryzyko ${cfg.riskPct}%, min R:R ${cfg.minRr}, min score ${cfg.minScore}.`, "ok");
+
+  // Concurrency & rate-limit tuned per source
+  let limiter;
+  if (cfg.source === "twelvedata") {
+    limiter = new Limiter(1, 8000); // free tier: 8 req/min
+  } else if (cfg.source === "stooq") {
+    limiter = new Limiter(5, 120);  // 5 parallel, gentle pacing
+  } else {
+    limiter = new Limiter(8, 0);    // CSV cache: full speed
+  }
+
+  const startMs = Date.now();
+  let done = 0, found = 0, errors = 0;
+
+  const fetcher = cfg.source === "twelvedata" ? t => fetchTwelveData(t, cfg.tdKey)
+                : cfg.source === "csv"        ? fetchFromCsv
+                : fetchStooq;
+
+  const tasks = universe.map(ticker => limiter.run(async () => {
+    if (aborted) return;
+    try {
+      const bars = await fetcher(ticker);
+      const sig = analyze(ticker, bars, cfg);
+      if (sig) {
+        if (cfg.finKey) {
+          try { sig.story = await fetchStory(ticker, cfg.finKey); }
+          catch (e) { /* keep story null */ }
+        }
+        currentSignals.push(sig);
+        renderSignal(sig);
+        notify(sig);
+        const journaled = addToJournal(sig);
+        found++;
+        log(`✓ ${ticker}  RR2 ${sig.rr2.toFixed(2)}  score ${sig.setupScore}  $${sig.price.toFixed(2)}${journaled ? "  → dziennik" : "  (już w dzienniku)"}`, "ok");
+      }
+    } catch (e) {
+      errors++;
+      if (errors <= 5) log(`${ticker}: ${e.message}`, "err");
+      else if (errors === 6) log(`(więcej błędów — wyciszone w logu)`, "err");
+    } finally {
+      done++;
+      updateProgress(done, universe.length, found, startMs);
+    }
+  }));
+
+  await Promise.all(tasks);
+
+  // Sort signals: best score, then best R:R
+  currentSignals.sort((a, b) =>
+    b.setupScore !== a.setupScore ? b.setupScore - a.setupScore : b.rr2 - a.rr2);
+  $("signals").innerHTML = "";
+  currentSignals.forEach(renderSignal);
+
+  const dt = Math.floor((Date.now() - startMs) / 1000);
+  $("signals-title").textContent = `Sygnały Wyckoff Spring — ${currentSignals.length}`;
+  $("scan-summary").textContent = `${universe.length} przeskanowanych, ${errors} bez danych · ${dt} sek`;
+  log(`Zakończono w ${dt} sek. ${currentSignals.length} sygnałów. ${errors} błędów / brak danych.`, "ok");
+
+  // If most tickers failed, show actionable guidance.
+  const errRate = universe.length > 0 ? errors / universe.length : 0;
+  if (errRate > 0.5) {
+    const tip = document.createElement("div");
+    tip.className = "callout warn";
+    if (cfg.source === "stooq") {
+      tip.innerHTML =
+        `<b>${errors} z ${universe.length} tickerów bez danych.</b> ` +
+        `Stooq blokowany przez Twoją sieć (firewall / CORS-proxy też nie przeszły). ` +
+        `Najszybsza naprawa: zarejestruj się na <a href="https://twelvedata.com/register" target="_blank" rel="noopener" style="color:#88c0d0">twelvedata.com</a> ` +
+        `(darmowo, ~30 sek), wklej klucz API w polu "Klucz Twelve Data" wyżej, ` +
+        `zmień <b>Źródło danych</b> na "Twelve Data" i kliknij Skanuj ponownie.`;
+    } else if (cfg.source === "twelvedata") {
+      tip.innerHTML =
+        `<b>${errors} z ${universe.length} tickerów bez danych.</b> ` +
+        `Sprawdź czy klucz Twelve Data jest poprawny i nie wyczerpałeś dziennego limitu (free tier: 800/dzień).`;
+    } else {
+      tip.innerHTML =
+        `<b>${errors} z ${universe.length} tickerów bez danych w plikach CSV.</b> ` +
+        `Sprawdź czy nazwy plików odpowiadają tickerom (np. <code>AAPL.csv</code>) i czy CSV mają min. 365 wierszy.`;
+    }
+    $("progress-panel").appendChild(tip);
+  }
+
+  $("scan-btn").classList.remove("hidden");
+  $("stop-btn").classList.add("hidden");
+  $("export-btn").disabled = currentSignals.length === 0;
+  $("save-btn").disabled = currentSignals.length === 0;
+  scanInProgress = false;
+
+  // Auto-scan scheduling: prefer specific time-of-day; fall back to interval.
+  if (!aborted) {
+    const dailyTime = $("daily-time").value; // "HH:MM"
+    const rescanMin = parseInt($("rescan-min").value, 10) || 0;
+    if (dailyTime && /^\d{1,2}:\d{2}$/.test(dailyTime)) {
+      const [hh, mm] = dailyTime.split(":").map(Number);
+      const next = new Date();
+      next.setHours(hh, mm, 0, 0);
+      if (next <= new Date()) next.setDate(next.getDate() + 1);
+      const delayMs = next - new Date();
+      log(`Następny auto-scan: ${next.toLocaleString("pl-PL")}.`, "ok");
+      rescanTimer = setTimeout(runScan, delayMs);
+    } else if (rescanMin > 0) {
+      log(`Auto-rescan za ${rescanMin} min.`, "ok");
+      rescanTimer = setTimeout(runScan, rescanMin * 60 * 1000);
+    }
+  }
+}
+
+// ===========================================================================
+//  JOURNAL — record signals + measure effectiveness at 5d / 10d / 21d
+// ===========================================================================
+const JOURNAL_KEY = "wyck_journal_v1";
+
+function loadJournal() {
+  try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || "[]"); }
+  catch (e) { return []; }
+}
+function persistJournal(arr) {
+  try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(arr)); return true; }
+  catch (e) {
+    setJournalStatus(`Zapis dziennika nie powiódł się: ${e.message}`, "err");
+    return false;
+  }
+}
+function setJournalStatus(msg, cls) {
+  const el = $("journal-status");
+  if (el) { el.textContent = msg; el.style.color = cls === "err" ? "#bf616a" : "#a8b5c8"; }
+}
+function genId() {
+  return (crypto && crypto.randomUUID) ? crypto.randomUUID()
+    : "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+// Add a fresh signal to the journal; dedupe by (ticker, scanDate)
+function addToJournal(sig) {
+  const journal = loadJournal();
+  if (journal.some(j => j.ticker === sig.ticker && j.scanDate === sig.scanDate)) return false;
+  journal.push({
+    id: genId(),
+    ticker: sig.ticker,
+    scanDate: sig.scanDate,
+    addedAt: new Date().toISOString(),
+    entry: sig.entry, sl: sig.sl, tp1: sig.tp1, tp2: sig.tp2,
+    rr1: sig.rr1, rr2: sig.rr2,
+    shares: sig.shares,
+    setupScore: sig.setupScore,
+    springDate: sig.springDate,
+    trSupport: sig.trSupport, trResistance: sig.trResistance,
+    catalysts: (sig.story && sig.story.catalysts) ? [...sig.story.catalysts] : [],
+    outcomes: { d5: null, d10: null, d21: null },
+  });
+  persistJournal(journal);
+  updateJournalCount();
+  return true;
+}
+
+function updateJournalCount() {
+  const el = $("journal-count");
+  if (el) el.textContent = String(loadJournal().length);
+}
+
+// --- Outcome evaluation ---------------------------------------------------
+// Walk forward through post-signal bars and classify the outcome.
+// Conservative: if same bar touches both SL and TP, count as stopped.
+function classifyOutcome(barsAfter, sl, tp1, tp2) {
+  let result = "open";
+  let resultDay = barsAfter.length;
+  for (let i = 0; i < barsAfter.length; i++) {
+    const b = barsAfter[i];
+    const stopped = b.low <= sl;
+    const hitTp2  = b.high >= tp2;
+    const hitTp1  = b.high >= tp1;
+    if (stopped) { result = "stopped"; resultDay = i + 1; break; }
+    if (hitTp2)  { result = "tp2_hit"; resultDay = i + 1; break; }
+    if (hitTp1 && result === "open") { result = "tp1_hit"; resultDay = i + 1; }
+  }
+  return { result, resultDay };
+}
+
+async function evaluateEntry(entry, fetcher) {
+  let bars;
+  try { bars = await fetcher(entry.ticker); }
+  catch (e) { return { error: e.message }; }
+  if (!bars || bars.length === 0) return { error: "brak danych" };
+
+  // Find scanDate index, or the closest preceding bar
+  let scanIdx = bars.findIndex(b => b.date === entry.scanDate);
+  if (scanIdx < 0) {
+    for (let i = 0; i < bars.length; i++) {
+      if (bars[i].date > entry.scanDate) break;
+      scanIdx = i;
+    }
+  }
+  if (scanIdx < 0) return { error: "data sygnału przed historią" };
+
+  const post = bars.slice(scanIdx + 1);
+  if (post.length === 0) return { error: "brak barów po sygnale" };
+
+  const risk = entry.entry - entry.sl;
+  const out = {};
+  for (const h of [5, 10, 21]) {
+    const win = post.slice(0, h);
+    if (win.length === 0) { out[`d${h}`] = null; continue; }
+    const cls = classifyOutcome(win, entry.sl, entry.tp1, entry.tp2);
+    const lastClose = win[win.length - 1].close;
+    const maxHigh = Math.max(...win.map(b => b.high));
+    const minLow  = Math.min(...win.map(b => b.low));
+    out[`d${h}`] = {
+      barsElapsed: win.length,
+      barsFull: win.length >= h,
+      lastClose: round(lastClose, 2),
+      pctReturn: round((lastClose - entry.entry) / entry.entry * 100, 2),
+      rMultiple: round((lastClose - entry.entry) / risk, 2),
+      maxHigh: round(maxHigh, 2),
+      minLow: round(minLow, 2),
+      mfeR: round((maxHigh - entry.entry) / risk, 2),
+      maeR: round((minLow  - entry.entry) / risk, 2),
+      result: cls.result,
+      resultDay: cls.resultDay,
+      evaluatedAt: new Date().toISOString(),
+    };
+  }
+  return out;
+}
+
+async function reEvaluateAll() {
+  const journal = loadJournal();
+  if (journal.length === 0) {
+    setJournalStatus("Dziennik jest pusty — najpierw zrób skan."); return;
+  }
+  const source = $("source").value;
+  const tdKey = $("tdkey").value.trim();
+  const fetcher = source === "twelvedata" ? t => fetchTwelveData(t, tdKey)
+                : source === "csv"        ? fetchFromCsv
+                : fetchStooq;
+
+  // Skip entries where ALL horizons are already final (stopped or won, full bars)
+  const needsUpdate = journal.filter(e => {
+    return ["d5", "d10", "d21"].some(h => {
+      const o = e.outcomes[h];
+      if (!o) return true;
+      const isFinal = o.barsFull && (o.result === "stopped" || o.result === "tp2_hit");
+      return !isFinal;
+    });
+  });
+
+  if (needsUpdate.length === 0) {
+    setJournalStatus(`Wszystkie ${journal.length} wpisów już rozstrzygnięte.`);
+    return;
+  }
+
+  const limiter = source === "twelvedata" ? new Limiter(1, 8000)
+                : source === "stooq"      ? new Limiter(5, 120)
+                : new Limiter(8, 0);
+
+  $("evaluate-btn").disabled = true;
+  let done = 0, errors = 0;
+  setJournalStatus(`Aktualizuję 0 / ${needsUpdate.length}…`);
+
+  const tasks = needsUpdate.map(e => limiter.run(async () => {
+    const r = await evaluateEntry(e, fetcher);
+    if (r.error) errors++;
+    else e.outcomes = { ...e.outcomes, ...r };
+    done++;
+    setJournalStatus(`Aktualizuję ${done} / ${needsUpdate.length}…`);
+  }));
+  await Promise.all(tasks);
+  persistJournal(journal);
+  setJournalStatus(`Zaktualizowano ${done - errors} / ${needsUpdate.length} wpisów (${errors} bez danych).`);
+  $("evaluate-btn").disabled = false;
+  renderJournal();
+}
+
+// --- Aggregate statistics --------------------------------------------------
+function aggregateStats(journal, horizon) {
+  const ev = journal.filter(j => j.outcomes[horizon] && j.outcomes[horizon].result);
+  if (ev.length === 0) return null;
+  const result = (j) => j.outcomes[horizon].result;
+  const wins   = ev.filter(j => result(j) === "tp1_hit" || result(j) === "tp2_hit");
+  const tp1    = ev.filter(j => result(j) === "tp1_hit").length;
+  const tp2    = ev.filter(j => result(j) === "tp2_hit").length;
+  const losses = ev.filter(j => result(j) === "stopped");
+  const open   = ev.filter(j => result(j) === "open");
+  const avgR   = ev.reduce((s, j) => s + j.outcomes[horizon].rMultiple, 0) / ev.length;
+  const avgPct = ev.reduce((s, j) => s + j.outcomes[horizon].pctReturn, 0) / ev.length;
+  const winsR  = wins.length   ? wins.reduce((s, j)   => s + j.outcomes[horizon].rMultiple, 0) / wins.length   : 0;
+  const lossR  = losses.length ? losses.reduce((s, j) => s + j.outcomes[horizon].rMultiple, 0) / losses.length : 0;
+  const winRate = wins.length / ev.length;
+  const expectancy = winRate * winsR + (1 - winRate) * lossR;
+  return {
+    total: ev.length, wins: wins.length, losses: losses.length, open: open.length,
+    tp1Hits: tp1, tp2Hits: tp2,
+    winRate: winRate * 100, avgR, avgPct,
+    winsAvgR: winsR, lossesAvgR: lossR, expectancy,
+  };
+}
+
+function aggregateByScoreBucket(journal, horizon) {
+  const buckets = [
+    { label: "60-69", min: 60, max: 69 },
+    { label: "70-79", min: 70, max: 79 },
+    { label: "80-89", min: 80, max: 89 },
+    { label: "90-100", min: 90, max: 100 },
+  ];
+  return buckets.map(b => {
+    const entries = journal.filter(j =>
+      j.setupScore >= b.min && j.setupScore <= b.max &&
+      j.outcomes[horizon] && j.outcomes[horizon].result);
+    if (entries.length === 0) return { ...b, total: 0, wins: 0, winRate: 0 };
+    const wins = entries.filter(j => {
+      const r = j.outcomes[horizon].result;
+      return r === "tp1_hit" || r === "tp2_hit";
+    });
+    return { ...b, total: entries.length, wins: wins.length,
+             winRate: wins.length / entries.length * 100 };
+  });
+}
+
+// --- Rendering ------------------------------------------------------------
+function statColorCls(winRate) {
+  if (winRate >= 70) return "";
+  if (winRate >= 50) return "mid";
+  return "low";
+}
+
+function renderStats(journal) {
+  const horizons = [
+    { key: "d5",  label: "5 dni handlowych" },
+    { key: "d10", label: "2 tygodnie (10d)" },
+    { key: "d21", label: "1 miesiąc (21d)" },
+  ];
+  $("stats-overview").innerHTML = horizons.map(h => {
+    const s = aggregateStats(journal, h.key);
+    if (!s) {
+      return `<div class="stat-card">
+        <h3>${h.label}</h3>
+        <div class="muted" style="font-size: 13px; padding: 12px 0;">
+          Brak ocenionych wpisów. Kliknij <b>Aktualizuj wyniki</b> gdy minie odpowiedni czas od sygnałów.
+        </div>
+      </div>`;
+    }
+    return `<div class="stat-card">
+      <h3>${h.label}</h3>
+      <div class="winrate ${statColorCls(s.winRate)}">${s.winRate.toFixed(0)}%</div>
+      <div class="n-label">win rate · n = ${s.total}</div>
+      <div class="stat-row"><span>TP1 hit</span><b>${s.tp1Hits}</b></div>
+      <div class="stat-row"><span>TP2 hit</span><b>${s.tp2Hits}</b></div>
+      <div class="stat-row"><span>Stop loss</span><b>${s.losses}</b></div>
+      <div class="stat-row"><span>Otwarte</span><b>${s.open}</b></div>
+      <div class="stat-row"><span>Średnie R</span><b>${s.avgR >= 0 ? "+" : ""}${s.avgR.toFixed(2)}R</b></div>
+      <div class="stat-row"><span>Średni zwrot</span><b>${s.avgPct >= 0 ? "+" : ""}${s.avgPct.toFixed(2)}%</b></div>
+      <div class="stat-row"><span>Expectancy</span><b>${s.expectancy >= 0 ? "+" : ""}${s.expectancy.toFixed(2)}R</b></div>
+    </div>`;
+  }).join("");
+}
+
+function renderBuckets(journal) {
+  const horizon = $("journal-horizon").value;
+  const buckets = aggregateByScoreBucket(journal, horizon);
+  const maxN = Math.max(1, ...buckets.map(b => b.total));
+  $("score-buckets").innerHTML = buckets.map(b => {
+    const widthPct = (b.total / maxN) * 100;
+    const fillCls = statColorCls(b.winRate);
+    return `<div class="bucket-row">
+      <div class="bucket-label">Score ${b.label}</div>
+      <div class="bucket-vis">
+        <div class="bucket-fill ${fillCls}" style="width: ${widthPct}%"></div>
+      </div>
+      <div class="bucket-num">n=${b.total} · ${b.total > 0 ? b.winRate.toFixed(0) + "% win" : "brak danych"}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderJournalTable(journal) {
+  const horizon = $("journal-horizon").value;
+  const filter = $("journal-filter").value;
+  const search = $("journal-search").value.trim().toUpperCase();
+
+  let entries = journal.slice();
+  if (search) entries = entries.filter(e => e.ticker.includes(search));
+  if (filter === "wins")
+    entries = entries.filter(e => e.outcomes[horizon] && ["tp1_hit","tp2_hit"].includes(e.outcomes[horizon].result));
+  if (filter === "losses")
+    entries = entries.filter(e => e.outcomes[horizon] && e.outcomes[horizon].result === "stopped");
+  if (filter === "open")
+    entries = entries.filter(e => !e.outcomes[horizon] || e.outcomes[horizon].result === "open");
+
+  entries.sort((a, b) => (b.scanDate || "").localeCompare(a.scanDate || ""));
+  $("journal-table-status").textContent = `${entries.length} z ${journal.length} wpisów`;
+
+  if (entries.length === 0) {
+    $("journal-table").innerHTML =
+      `<tr><td colspan="9" style="text-align: center; padding: 30px;" class="muted">Brak wpisów spełniających filtr.</td></tr>`;
+    return;
+  }
+
+  const rows = entries.map(e => {
+    const o = e.outcomes[horizon];
+    let outcomeCell = '<span class="outcome-pending">brak oceny</span>';
+    if (o) {
+      if (o.result === "tp1_hit")     outcomeCell = `<span class="outcome-tp1">TP1 (d${o.resultDay})</span>`;
+      else if (o.result === "tp2_hit") outcomeCell = `<span class="outcome-tp2">TP2 (d${o.resultDay})</span>`;
+      else if (o.result === "stopped") outcomeCell = `<span class="outcome-stopped">Stop (d${o.resultDay})</span>`;
+      else                              outcomeCell = `<span class="outcome-open">Otwarte (${o.barsElapsed}/${horizon.slice(1)}d)</span>`;
+    }
+    const pctCell = o
+      ? `<span class="${o.pctReturn >= 0 ? 'pos' : 'neg'}">${o.pctReturn >= 0 ? '+' : ''}${o.pctReturn.toFixed(2)}%</span>`
+      : "—";
+    const rCell = o ? `${o.rMultiple >= 0 ? '+' : ''}${o.rMultiple.toFixed(2)}R` : "—";
+    return `<tr>
+      <td><b>${esc(e.ticker)}</b></td>
+      <td>${esc(e.scanDate)}</td>
+      <td>${e.setupScore}</td>
+      <td>$${e.entry.toFixed(2)}</td>
+      <td>$${e.sl.toFixed(2)}</td>
+      <td>${e.rr2.toFixed(2)}</td>
+      <td>${outcomeCell}</td>
+      <td>${pctCell}</td>
+      <td>${rCell}</td>
+    </tr>`;
+  });
+
+  $("journal-table").innerHTML = `
+    <thead><tr>
+      <th>Ticker</th><th>Data sygnału</th><th>Score</th>
+      <th>Entry</th><th>SL</th><th>R:R2</th>
+      <th>Wynik</th><th>Zwrot</th><th>R multiple</th>
+    </tr></thead>
+    <tbody>${rows.join("")}</tbody>
+  `;
+}
+
+function renderJournal() {
+  const journal = loadJournal();
+  renderStats(journal);
+  renderBuckets(journal);
+  renderJournalTable(journal);
+  updateJournalCount();
+}
+
+// --- Import / Export -------------------------------------------------------
+function exportJournal() {
+  const journal = loadJournal();
+  if (journal.length === 0) { setJournalStatus("Dziennik jest pusty."); return; }
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    entries: journal,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `wyckoff_journal_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function importJournal(file) {
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const incoming = Array.isArray(parsed) ? parsed
+                    : Array.isArray(parsed.entries) ? parsed.entries
+                    : null;
+    if (!incoming) throw new Error("nieprawidłowy format pliku");
+    const existing = loadJournal();
+    const byKey = new Map(existing.map(e => [e.ticker + "_" + e.scanDate, e]));
+    let added = 0, updated = 0;
+    for (const e of incoming) {
+      if (!e.ticker || !e.scanDate) continue;
+      const key = e.ticker + "_" + e.scanDate;
+      if (byKey.has(key)) {
+        const old = byKey.get(key);
+        old.outcomes = { ...old.outcomes, ...(e.outcomes || {}) };
+        updated++;
+      } else {
+        existing.push(e);
+        byKey.set(key, e);
+        added++;
+      }
+    }
+    persistJournal(existing);
+    setJournalStatus(`Import OK: ${added} nowych, ${updated} zaktualizowanych.`);
+    renderJournal();
+  } catch (e) {
+    setJournalStatus(`Błąd importu: ${e.message}`, "err");
+  }
+}
+
+function clearJournal() {
+  if (!confirm("Wyczyścić cały dziennik? Tej operacji nie da się cofnąć.")) return;
+  try { localStorage.removeItem(JOURNAL_KEY); } catch (e) {}
+  setJournalStatus("Dziennik wyczyszczony.");
+  renderJournal();
+}
+
+// --- Tab switching --------------------------------------------------------
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.tab === name));
+  $("tab-scanner").classList.toggle("hidden", name !== "scanner");
+  $("tab-journal").classList.toggle("hidden", name !== "journal");
+  if (name === "journal") renderJournal();
+}
+
+// ===========================================================================
+//  UI WIRING
+// ===========================================================================
+$("universe").addEventListener("change", () => {
+  $("custom-tickers-row").classList.toggle("hidden", $("universe").value !== "CUSTOM");
+});
+$("source").addEventListener("change", () => {
+  $("csv-upload-row").classList.toggle("hidden", $("source").value !== "csv");
+});
+$("csv-files").addEventListener("change", async e => {
+  await loadCsvFiles(e.target.files);
+  log(`Załadowano ${Object.keys(csvCache).length} plików CSV.`, "ok");
+});
+$("notify").addEventListener("change", e => {
+  if (e.target.checked && "Notification" in window) {
+    Notification.requestPermission().then(p => {
+      if (p !== "granted") { e.target.checked = false; }
+    });
+  }
+});
+$("scan-btn").addEventListener("click", () => {
+  if (rescanTimer) { clearTimeout(rescanTimer); rescanTimer = null; }
+  runScan().catch(e => log(`FATAL: ${e.message}`, "err"));
+});
+$("stop-btn").addEventListener("click", () => {
+  aborted = true;
+  if (rescanTimer) { clearTimeout(rescanTimer); rescanTimer = null; }
+  log("Anulowano przez użytkownika.", "err");
+  $("scan-btn").classList.remove("hidden");
+  $("stop-btn").classList.add("hidden");
+});
+$("test-btn").addEventListener("click", () => {
+  testConnectivity().catch(e => {
+    $("config-msg").innerHTML = `<div class="callout warn">Błąd testu: ${e.message}</div>`;
+    $("test-btn").disabled = false;
+  });
+});
+$("export-btn").addEventListener("click", exportCsv);
+$("save-btn").addEventListener("click", saveReport);
+
+// Journal tab wiring
+document.querySelectorAll(".tab").forEach(t =>
+  t.addEventListener("click", () => switchTab(t.dataset.tab)));
+$("evaluate-btn").addEventListener("click", () => {
+  reEvaluateAll().catch(e => setJournalStatus(`Błąd: ${e.message}`, "err"));
+});
+$("journal-export").addEventListener("click", exportJournal);
+$("journal-import").addEventListener("change", e => {
+  if (e.target.files && e.target.files[0]) importJournal(e.target.files[0]);
+  e.target.value = "";
+});
+$("journal-clear").addEventListener("click", clearJournal);
+$("journal-horizon").addEventListener("change", renderJournal);
+$("journal-filter").addEventListener("change", renderJournal);
+$("journal-search").addEventListener("input", renderJournal);
+updateJournalCount();
+
+// Persist config in localStorage
+const PERSIST = ["nav", "risk", "minrr", "minscore", "universe", "source", "tdkey", "finkey", "rescan-min", "daily-time"];
+try {
+  for (const id of PERSIST) {
+    const v = localStorage.getItem("wyck_" + id);
+    if (v != null) $(id).value = v;
+  }
+  for (const id of PERSIST) {
+    $(id).addEventListener("change", () => {
+      try { localStorage.setItem("wyck_" + id, $(id).value); } catch (e) {}
+    });
+  }
+  $("universe").dispatchEvent(new Event("change"));
+  $("source").dispatchEvent(new Event("change"));
+} catch (e) { /* localStorage might be blocked */ }
+
+// ?autoscan=1 — Task Scheduler can launch the page and we kick off the scan
+// automatically. We wait 1.5 s so config (loaded from localStorage above) is
+// fully wired before clicking.
+if (new URLSearchParams(location.search).get("autoscan") === "1") {
+  setTimeout(() => {
+    log("Autostart przez ?autoscan=1 — uruchamiam skan.", "ok");
+    $("scan-btn").click();
+  }, 1500);
+}
+</script>
+
+</body>
+</html>
