@@ -291,7 +291,7 @@ footer.bottom {
 <section class="panel" id="config-panel">
   <h2>Konfiguracja</h2>
 
-  <div class="config-grid">
+  <div class="config-grid" style="grid-template-columns: repeat(5, 1fr);">
     <div class="field">
       <label>NAV portfela (USD)</label>
       <input type="number" id="nav" value="550000" min="1000" step="1000">
@@ -305,8 +305,12 @@ footer.bottom {
       <input type="number" id="minrr" value="3" min="1" step="0.5">
     </div>
     <div class="field">
-      <label>Min score (0-100)</label>
+      <label>Min Spring score</label>
       <input type="number" id="minscore" value="60" min="0" max="100" step="5">
+    </div>
+    <div class="field">
+      <label>Min Struktura</label>
+      <input type="number" id="minstruct" value="40" min="0" max="100" step="5">
     </div>
   </div>
 
@@ -895,6 +899,9 @@ function analyze(ticker, bars, cfg) {
   const sig = buildSignal(ticker, bars, tr, spring, cfg);
   if (!sig) return null;
   sig.structure = analyzeWyckoffStructure(bars, tr, spring);
+  // Filter by minimum structure quality — rejects "naked Springs"
+  // without proper Phase A accumulation history.
+  if (cfg.minStruct && sig.structure && sig.structure.overallQuality < cfg.minStruct) return null;
   return sig;
 }
 
@@ -1317,23 +1324,25 @@ function renderSignal(s) {
   const card = document.createElement("article");
   card.className = "signal " + rowClass(s.setupScore);
   const sigIdx = currentSignals.indexOf(s);
-  // Conviction tier (Wyck X% · Klar X/20 · TN ***)
-  const wyckPct = s.structure ? s.structure.overallQuality : s.setupScore;
+  // Conviction tier — Setup + Struktura shown separately
+  const setupPct = s.setupScore;
+  const structPct = s.structure ? s.structure.overallQuality : 0;
   const klarmanScorecard = computeKlarmanScorecard(s);
   const klarTotal = klarmanScorecard.total;
   const klarMax = klarmanScorecard.maxPossible;
-  // Convert Klarman 0-20 score to 0-40 contribution for conviction tier
+  // Conviction tier = weighted blend of setup + struct + klar + rr
   const klarContribution = (klarTotal / 20) * 40;
-  const convTotal = Math.round(Math.min(100, (s.structure ? s.structure.overallQuality * 0.4 : s.setupScore * 0.4) + klarContribution + Math.min(15, s.rr2 * 2.5) + (s.followThrough === true ? 5 : 0)));
+  const convTotal = Math.round(Math.min(100, structPct * 0.4 + klarContribution + Math.min(15, s.rr2 * 2.5) + (s.followThrough === true ? 5 : 0)));
   const tier = convTotal >= 85 ? "T1" : convTotal >= 70 ? "T2" : convTotal >= 55 ? "T3" : "T4";
   const stars = convTotal >= 85 ? "★★★" : convTotal >= 70 ? "★★" : convTotal >= 55 ? "★" : "";
   const tierColor = convTotal >= 85 ? "#a3be8c" : convTotal >= 70 ? "#88c0d0" : convTotal >= 55 ? "#ebcb8b" : "#bf616a";
+  const structColor = structPct >= 70 ? "#a3be8c" : structPct >= 40 ? "#ebcb8b" : "#bf616a";
   card.innerHTML = `
     <header class="sig-head">
       <div>
         <h3>${esc(s.ticker)} <small>${esc(s.name)}</small></h3>
         <div class="sig-meta" style="font-weight: 500;">
-          <span style="color: ${tierColor};">Wyck <b>${wyckPct}%</b> · Klar <b>${klarTotal}/${klarMax}</b> · ${tier} ${stars}</span>
+          <span style="color: ${tierColor};">Setup <b>${setupPct}</b> · Struktura <b style="color: ${structColor};">${structPct}</b> · Klar <b>${klarTotal}/${klarMax}</b> · ${tier} ${stars}</span>
         </div>
         <div class="sig-meta">
           ${esc(s.sector || "—")} ·
@@ -1481,6 +1490,7 @@ async function runScan() {
     positionUsd: parseFloat($("position-usd").value) || 10000,
     minRr: parseFloat($("minrr").value) || 3,
     minScore: parseFloat($("minscore").value) || 60,
+    minStruct: parseFloat($("minstruct").value) || 0,
     source: $("source").value,
     tdKey: $("tdkey").value.trim(),
     finKey: $("finkey").value.trim(),
@@ -2341,32 +2351,9 @@ async function loadPdfPolishFonts() {
   return false;
 }
 
-async function applyPolishFont(doc) {
-  const fonts = await loadPdfPolishFonts();
-  if (fonts) {
-    try {
-      doc.addFileToVFS('Roboto-Regular.ttf', fonts.reg);
-      doc.addFileToVFS('Roboto-Bold.ttf', fonts.bold);
-      // CRITICAL: 5th param 'Identity-H' enables Unicode encoding for
-      // Polish diacritics. Without it jsPDF uses WinAnsi and ą/ć/ę/ł/ń/ó/ś/ź/ż
-      // get mangled.
-      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', 400, 'Identity-H');
-      doc.addFont('Roboto-Bold.ttf',    'Roboto', 'bold',   700, 'Identity-H');
-      // Redirect 'helvetica' calls to 'Roboto'
-      const origSetFont = doc.setFont.bind(doc);
-      doc.setFont = function(family, style) {
-        if (family === 'helvetica') family = 'Roboto';
-        if (style === 'italic') style = 'normal';   // Italic TTF not loaded; reuse normal
-        return origSetFont(family, style || 'normal');
-      };
-      doc.setFont('Roboto', 'normal');
-      console.log('PDF: Roboto zarejestrowane z Identity-H — polskie znaki powinny działać');
-      return true;
-    } catch (e) {
-      console.warn('PDF: rejestracja fonta nie powiodła się, fallback na transliterację:', e.message);
-    }
-  }
-  // Fallback — transliterate Polish characters in all text drawn
+// Install transliteration wrapper on doc (ą→a, ć→c, etc.) — used as fallback
+// when Polish TTF can't be registered or causes Unicode rendering errors.
+function installAsciiTransliteration(doc) {
   const origText = doc.text.bind(doc);
   doc.text = function(text, x, y, opts) {
     let tx;
@@ -2380,39 +2367,82 @@ async function applyPolishFont(doc) {
     const tx = typeof text === 'string' ? plToAscii(text) : text;
     return origSplit(tx, w, opts);
   };
+}
+
+// Sticky flag — once Polish font fails to render, skip it for subsequent PDFs
+let _polishFontRenderFailed = false;
+
+async function applyPolishFont(doc) {
+  if (_polishFontRenderFailed) {
+    installAsciiTransliteration(doc);
+    return false;
+  }
+  const fonts = await loadPdfPolishFonts();
+  if (fonts) {
+    try {
+      doc.addFileToVFS('Roboto-Regular.ttf', fonts.reg);
+      doc.addFileToVFS('Roboto-Bold.ttf', fonts.bold);
+      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', 400, 'Identity-H');
+      doc.addFont('Roboto-Bold.ttf',    'Roboto', 'bold',   700, 'Identity-H');
+      const origSetFont = doc.setFont.bind(doc);
+      doc.setFont = function(family, style) {
+        if (family === 'helvetica') family = 'Roboto';
+        if (style === 'italic') style = 'normal';
+        return origSetFont(family, style || 'normal');
+      };
+      doc.setFont('Roboto', 'normal');
+      return true;
+    } catch (e) {
+      console.warn('PDF: addFont/setFont failed:', e.message);
+    }
+  }
+  installAsciiTransliteration(doc);
   return false;
 }
 
 async function generatePdf(signal) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert("Biblioteka jsPDF nie załadowana. Sprawdź połączenie z cdn.jsdelivr.net (firewall?).");
+    alert("Biblioteka jsPDF nie zaladowana. Sprawdz polaczenie z cdn.jsdelivr.net (firewall?).");
     return;
   }
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('portrait', 'mm', 'a4');
-
-  // Setup Polish font (or fallback to ASCII transliteration)
-  await applyPolishFont(doc);
-
-  // === PAGE 1: header + Klarman compliance ===
-  drawPdfHeader(doc, signal);
-  drawKlarmanCompliance(doc, signal);
-
-  // === PAGE 2: actual stock chart with Wyckoff zones ===
-  doc.addPage();
-  drawActualChart(doc, signal);
-
-  // === PAGE 3: theoretical reference + element-by-element comparison ===
-  doc.addPage();
-  drawTheoreticalChart(doc, signal);
-
-  // === PAGE 4: detected Wyckoff phase elements + quality table ===
-  if (signal.structure) {
-    doc.addPage();
-    drawStructureAnalysis(doc, signal);
+  // Two attempts: (1) Polish font with Identity-H, (2) ASCII transliteration.
+  // jsPDF's Identity-H encoding can fail at RENDER time (not addFont time)
+  // when the font's Unicode tables are malformed — so we wrap each whole
+  // attempt and retry from a fresh document if needed.
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const doc = new jsPDF('portrait', 'mm', 'a4');
+    try {
+      if (attempt === 0) {
+        await applyPolishFont(doc);
+      } else {
+        console.warn('PDF: ponawiam z transliteracją ASCII (Polish font Identity-H zawiódł)');
+        installAsciiTransliteration(doc);
+      }
+      drawPdfHeader(doc, signal);
+      drawKlarmanCompliance(doc, signal);
+      doc.addPage();
+      drawActualChart(doc, signal);
+      doc.addPage();
+      drawTheoreticalChart(doc, signal);
+      if (signal.structure) {
+        doc.addPage();
+        drawStructureAnalysis(doc, signal);
+      }
+      doc.save(`wyckoff_${signal.ticker}_${signal.scanDate}.pdf`);
+      if (attempt === 0) console.log('PDF: zapisane z polską czcionką');
+      else                console.log('PDF: zapisane z transliteracją ASCII (Polish font nie działa)');
+      return;
+    } catch (e) {
+      lastError = e;
+      console.warn(`PDF próba ${attempt + 1} nie powiodła się:`, e.message);
+      if (attempt === 0) {
+        _polishFontRenderFailed = true;   // remember — skip font next time
+      }
+    }
   }
-
-  doc.save(`wyckoff_${signal.ticker}_${signal.scanDate}.pdf`);
+  alert("Błąd PDF: " + (lastError ? lastError.message : "nieznany błąd"));
 }
 
 function drawStructureAnalysis(doc, s) {
@@ -3259,7 +3289,7 @@ $("journal-search").addEventListener("input", renderJournal);
 updateJournalCount();
 
 // Persist config in localStorage
-const PERSIST = ["nav", "position-usd", "minrr", "minscore", "universe", "source", "tdkey", "finkey", "rescan-min", "daily-time"];
+const PERSIST = ["nav", "position-usd", "minrr", "minscore", "minstruct", "universe", "source", "tdkey", "finkey", "rescan-min", "daily-time"];
 try {
   for (const id of PERSIST) {
     const v = localStorage.getItem("wyck_" + id);
