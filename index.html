@@ -1678,6 +1678,57 @@ function updateJournalCount() {
 // --- Outcome evaluation ---------------------------------------------------
 // Walk forward through post-signal bars and classify the outcome.
 // Conservative: if same bar touches both SL and TP, count as stopped.
+function loadJournal() {
+  try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || "[]"); }
+  catch (e) { return []; }
+}
+function persistJournal(arr) {
+  try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(arr)); return true; }
+  catch (e) {
+    setJournalStatus(`Zapis dziennika nie powiódł się: ${e.message}`, "err");
+    return false;
+  }
+}
+function setJournalStatus(msg, cls) {
+  const el = $("journal-status");
+  if (el) { el.textContent = msg; el.style.color = cls === "err" ? "#bf616a" : "#a8b5c8"; }
+}
+function genId() {
+  return (crypto && crypto.randomUUID) ? crypto.randomUUID()
+    : "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+// Add a fresh signal to the journal; dedupe by (ticker, scanDate)
+function addToJournal(sig) {
+  const journal = loadJournal();
+  if (journal.some(j => j.ticker === sig.ticker && j.scanDate === sig.scanDate)) return false;
+  journal.push({
+    id: genId(),
+    ticker: sig.ticker,
+    scanDate: sig.scanDate,
+    addedAt: new Date().toISOString(),
+    entry: sig.entry, sl: sig.sl, tp1: sig.tp1, tp2: sig.tp2,
+    rr1: sig.rr1, rr2: sig.rr2,
+    shares: sig.shares,
+    setupScore: sig.setupScore,
+    springDate: sig.springDate,
+    trSupport: sig.trSupport, trResistance: sig.trResistance,
+    catalysts: (sig.story && sig.story.catalysts) ? [...sig.story.catalysts] : [],
+    outcomes: { d5: null, d10: null, d21: null },
+  });
+  persistJournal(journal);
+  updateJournalCount();
+  return true;
+}
+
+function updateJournalCount() {
+  const el = $("journal-count");
+  if (el) el.textContent = String(loadJournal().length);
+}
+
+// --- Outcome evaluation ---------------------------------------------------
+// Walk forward through post-signal bars and classify the outcome.
+// Conservative: if same bar touches both SL and TP, count as stopped.
 function classifyOutcome(barsAfter, sl, tp1, tp2) {
   let result = "open";
   let resultDay = barsAfter.length;
