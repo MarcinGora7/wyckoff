@@ -474,7 +474,6 @@ const TICKERS = {
 
   NDX: "AAPL ABNB ADBE ADI ADP ADSK AEP AMAT AMD AMGN AMZN ANSS APP ARM ASML AVGO AZN BIIB BKNG BKR CCEP CDNS CDW CEG CHTR CMCSA COST CPRT CRWD CSCO CSGP CSX CTAS CTSH DASH DDOG DLTR DXCM EA EXC FANG FAST FTNT GEHC GFS GILD GOOG GOOGL HON IDXX INTC INTU ISRG KDP KHC KLAC LIN LRCX LULU MAR MCHP MDB MDLZ MELI META MNST MRVL MSFT MU NFLX NVDA NXPI ODFL ON ORLY PANW PAYX PCAR PDD PEP PYPL QCOM REGN ROP ROST SBUX SMCI SNPS TEAM TMUS TSLA TTD TTWO TXN VRSK VRTX WBD WDAY XEL ZS".split(/\s+/),
 
-  // S&P 500 — embedded list (current as of January 2026; may drift over time)
   SP500: ("A AAL AAPL ABBV ABNB ABT ACGL ACN ADBE ADI ADM ADP ADSK AEE AEP AES AFL AIG AIZ AJG AKAM ALB ALGN ALL ALLE AMAT AMCR AMD AME AMGN AMP AMT AMZN ANET ANSS AON AOS APA APD APH APO APTV ARE ATO AVB AVGO AVY AWK AXON AXP AZO BA BAC BALL BAX BBY BDX BEN BF-B BG BIIB BIO BK BKNG BKR BLDR BLK BMY BR BRK-B BRO BSX BWA BX BXP C CAG CAH CARR CAT CB CBOE CBRE CCI CCL CDNS CDW CE CEG CF CFG CHD CHRW CHTR CI CINF CL CLX CMCSA CME CMG CMI CMS CNC CNP COF COIN COO COP COR COST CPAY CPB CPRT CPT CRL CRM CRWD CSCO CSGP CSX CTAS CTLT CTRA CTSH CTVA CVS CVX CZR D DAL DAY DD DE DECK DELL DFS DG DGX DHI DHR DIS DLR DLTR DOC DOV DOW DPZ DRI DTE DUK DVA DVN DXCM EA EBAY ECL ED EFX EG EIX EL ELV EMN EMR ENPH EOG EPAM EQIX EQR EQT ERIE ES ESS ETN ETR EVRG EW EXC EXPD EXPE EXR F FANG FAST FCX FDS FDX FE FFIV FI FICO FIS FITB FMC FOX FOXA FRT FSLR FTNT FTV GD GDDY GE GEHC GEN GEV GILD GIS GL GLW GM GNRC GOOG GOOGL GPC GPN GRMN GS GWW HAL HAS HBAN HCA HD HES HIG HII HLT HOLX HON HPE HPQ HRL HSIC HST HSY HUBB HUM HWM IBM ICE IDXX IEX IFF INCY INTC INTU INVH IP IPG IQV IR IRM ISRG IT ITW IVZ J JBHT JBL JCI JKHY JNJ JNPR JPM K KDP KEY KEYS KHC KIM KKR KLAC KMB KMI KMX KO KR KVUE L LDOS LEN LH LHX LIN LKQ LLY LMT LNT LOW LRCX LULU LUV LVS LW LYB LYV MA MAA MAR MAS MCD MCHP MCK MCO MDLZ MDT MET META MGM MHK MKC MKTX MLM MMC MMM MNST MO MOH MOS MPC MPWR MRK MRNA MRO MS MSCI MSFT MSI MTB MTCH MTD MU NCLH NDAQ NDSN NEE NEM NFLX NI NKE NOC NOW NRG NSC NTAP NTRS NUE NVDA NVR NWS NWSA NXPI O ODFL OKE OMC ON ORCL ORLY OTIS OXY PANW PARA PAYC PAYX PCAR PCG PEG PEP PFE PFG PG PGR PH PHM PKG PLD PLTR PM PNC PNR PNW PODD POOL PPG PPL PRU PSA PSX PTC PWR PYPL QCOM QRVO RCL REG REGN RF RJF RL RMD ROK ROL ROP ROST RSG RTX RVTY SBAC SBUX SCHW SHW SJM SLB SMCI SNA SNPS SO SOLV SPG SPGI SRE STE STLD STT STX STZ SW SWK SWKS SYF SYK SYY T TAP TDG TDY TEL TER TFC TFX TGT TJX TKO TMO TMUS TPL TPR TRGP TRMB TROW TRV TSCO TSLA TSN TT TTWO TXN TXT TYL UAL UBER UDR UHS ULTA UNH UNP UPS URI USB V VICI VLO VLTO VMC VRSK VRSN VRTX VST VTR VTRS VZ WAB WAT WBA WBD WDC WEC WELL WFC WM WMB WMT WRB WST WTW WY WYNN XEL XOM XYL YUM ZBH ZBRA ZTS".split(/\s+/)),
 };
 
@@ -498,7 +497,7 @@ function buildUniverse(key) {
 }
 
 // ===========================================================================
-//  WYCKOFF MATH (port of Python wyckoff.py)
+//  WYCKOFF MATH
 // ===========================================================================
 const W = {
   MIN_BARS: 365, TR_WINDOW: 120, TR_EXCLUDE_RECENT: 3,
@@ -640,7 +639,7 @@ function buildSignal(ticker, bars, tr, spring, cfg) {
   if (rr2 < cfg.minRr) return null;
   // Fixed position sizing: target $X per trade; risk vs NAV is the OUTCOME.
   const shares = Math.floor(cfg.positionUsd / entry);
-  if (shares <= 0) return null;  // entry > target position (e.g. BRK.A)
+  if (shares <= 0) return null;
   const positionValue = shares * entry;
   const capitalAtRisk = shares * risk;
   const riskPctOfNav = cfg.navUsd > 0 ? (capitalAtRisk / cfg.navUsd) * 100 : 0;
@@ -726,20 +725,15 @@ function parseCsv(text) {
   return bars;
 }
 
-// Stooq.com does NOT send CORS headers, so direct browser fetches are blocked.
-// We try direct first (works in some setups) then fall back to public CORS proxies.
-// The first method that works is cached for the rest of this scan.
 const CORS_PROXIES = [
   u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
   u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
 ];
-let stooqMethod = null; // null = probe; otherwise "direct" or "proxy:N"
+let stooqMethod = null;
 
 async function fetchStooq(ticker) {
   const url = `https://stooq.com/q/d/l/?s=${ticker.toLowerCase()}.us&i=d`;
-  // Direct fetch is blocked (Stooq sends no CORS headers) — always route
-  // through one of the public CORS proxies.
   const methods = stooqMethod
     ? [stooqMethod]
     : ["proxy:0", "proxy:1", "proxy:2"];
@@ -752,14 +746,13 @@ async function fetchStooq(ticker) {
       resp = await fetch(target);
     } catch (e) {
       networkErr = e;
-      continue; // try next method
+      continue;
     }
     if (!resp.ok) {
       networkErr = new Error(`HTTP ${resp.status}`);
       continue;
     }
     const text = await resp.text();
-    // This method works (regardless of per-ticker outcome) — cache it.
     if (!stooqMethod) stooqMethod = m;
     if (text.length < 50 ||
         text.toLowerCase().includes("<html") ||
@@ -768,7 +761,6 @@ async function fetchStooq(ticker) {
     }
     return parseCsv(text);
   }
-  // All methods failed — reset so we re-probe next time.
   if (stooqMethod) stooqMethod = null;
   throw new Error("Stooq nieosiągalny (CORS/firewall)");
 }
@@ -782,7 +774,6 @@ async function fetchTwelveData(ticker, key) {
   if (j.status === "error") throw new Error(j.message || "API error");
   const v = j.values || [];
   if (v.length === 0) throw new Error("brak danych");
-  // Twelve Data returns newest first; reverse to chronological
   return v.slice().reverse().map(x => ({
     date: x.datetime,
     open: parseFloat(x.open), high: parseFloat(x.high),
@@ -791,7 +782,6 @@ async function fetchTwelveData(ticker, key) {
   })).filter(b => !isNaN(b.close));
 }
 
-// CSV upload: pre-load files into memory keyed by ticker
 const csvCache = {};
 async function loadCsvFiles(fileList) {
   for (const f of fileList) {
@@ -808,8 +798,7 @@ async function fetchFromCsv(ticker) {
 }
 
 // ===========================================================================
-//  CONNECTIVITY TEST — probes each data source to tell the user
-//  what actually works from their network.
+//  CONNECTIVITY TEST
 // ===========================================================================
 async function _probeUrl(url, validateBody) {
   try {
@@ -840,7 +829,6 @@ async function testConnectivity() {
   const validateStooqCsv = t => t && t.length > 100 &&
     !t.toLowerCase().includes("<html") && !t.toLowerCase().includes("brak danych");
 
-  // Probe in parallel, then label per source
   const probes = [
     ...CORS_PROXIES.map((fn, i) =>
       ["Stooq przez " + proxyNames[i], _probeUrl(fn(stooqUrl), validateStooqCsv)]),
@@ -858,21 +846,19 @@ async function testConnectivity() {
     results.push({ name, ...r });
   }
 
-  // Decide recommendation
   const stooqWorks = results.slice(0, 3).some(r => r.ok);
   const tdWorks = results[3].ok;
-  const finWorks = results[4].ok;
 
   let recommendation;
   if (tdWorks) {
     recommendation = tdKey
       ? `<b>Twelve Data działa.</b> Wybierz "Twelve Data" w Źródło danych i skanuj.`
-      : `<b>Twelve Data jest dostępne</b> z Twojej sieci. Zarejestruj się na <a href="https://twelvedata.com/register" target="_blank" rel="noopener" style="color:#88c0d0">twelvedata.com</a> (30 sek), wklej klucz w polu wyżej, zmień Źródło na "Twelve Data".`;
+      : `<b>Twelve Data jest dostępne</b> z Twojej sieci. Zarejestruj się na <a href="https://twelvedata.com/register" target="_blank" rel="noopener" style="color:#88c0d0">twelvedata.com</a>, wklej klucz w polu wyżej.`;
   } else if (stooqWorks) {
     const which = results.slice(0, 3).findIndex(r => r.ok);
-    recommendation = `<b>Stooq przez ${proxyNames[which]} działa.</b> Możesz skanować od razu — Stooq już domyślnie używa proxy.`;
+    recommendation = `<b>Stooq przez ${proxyNames[which]} działa.</b> Możesz skanować od razu.`;
   } else {
-    recommendation = `<b>Wszystkie zewnętrzne API zablokowane.</b> Jedyna ścieżka: <b>upload plików CSV</b>. Pobierz CSV w domu / na telefonie ze <a href="https://stooq.com" target="_blank" rel="noopener" style="color:#88c0d0">stooq.com</a> lub Yahoo Finance, skopiuj na firmowy komputer, wybierz "Upload plików CSV" w Źródle danych.`;
+    recommendation = `<b>Wszystkie zewnętrzne API zablokowane.</b> Jedyna ścieżka: <b>upload plików CSV</b>.`;
   }
 
   out.innerHTML = `
@@ -921,7 +907,6 @@ async function fetchStory(ticker, key) {
   const start120 = new Date(end - 120 * 86400000);
   const end90 = new Date(end.getTime() + 90 * 86400000);
 
-  // Parallel fetch
   const [news, earnings, insider, recom] = await Promise.all([
     finnhub("/company-news", { symbol: ticker, from: isoDate(start21), to: isoDate(end) }, key).catch(() => []),
     finnhub("/calendar/earnings", { symbol: ticker, from: isoDate(start120), to: isoDate(end90) }, key).catch(() => null),
@@ -1168,7 +1153,7 @@ function notify(s) {
     new Notification(`Wyckoff Spring: ${s.ticker}`, {
       body: `$${s.price.toFixed(2)} · R:R ${s.rr2.toFixed(2)} · score ${s.setupScore}/100`,
     });
-  } catch (e) { /* ignore */ }
+  } catch (e) {}
 }
 
 // ===========================================================================
@@ -1222,7 +1207,6 @@ async function runScan() {
   $("signals").innerHTML = "";
   $("log").innerHTML = "";
   $("config-msg").innerHTML = "";
-  // Remove any leftover guidance banner from a prior scan
   $("progress-panel").querySelectorAll(".callout.warn").forEach(n => n.remove());
 
   const cfg = {
@@ -1251,14 +1235,13 @@ async function runScan() {
 
   log(`Start. Uniwersum: ${universe.length} tickerów. Źródło: ${cfg.source}. NAV $${cfg.navUsd.toLocaleString()}, pozycja $${cfg.positionUsd.toLocaleString()}, min R:R ${cfg.minRr}, min score ${cfg.minScore}.`, "ok");
 
-  // Concurrency & rate-limit tuned per source
   let limiter;
   if (cfg.source === "twelvedata") {
-    limiter = new Limiter(1, 8000); // free tier: 8 req/min
+    limiter = new Limiter(1, 8000);
   } else if (cfg.source === "stooq") {
-    limiter = new Limiter(5, 120);  // 5 parallel, gentle pacing
+    limiter = new Limiter(5, 120);
   } else {
-    limiter = new Limiter(8, 0);    // CSV cache: full speed
+    limiter = new Limiter(8, 0);
   }
 
   const startMs = Date.now();
@@ -1276,7 +1259,7 @@ async function runScan() {
       if (sig) {
         if (cfg.finKey) {
           try { sig.story = await fetchStory(ticker, cfg.finKey); }
-          catch (e) { /* keep story null */ }
+          catch (e) {}
         }
         currentSignals.push(sig);
         renderSignal(sig);
@@ -1297,7 +1280,6 @@ async function runScan() {
 
   await Promise.all(tasks);
 
-  // Sort signals: best score, then best R:R
   currentSignals.sort((a, b) =>
     b.setupScore !== a.setupScore ? b.setupScore - a.setupScore : b.rr2 - a.rr2);
   $("signals").innerHTML = "";
@@ -1308,7 +1290,6 @@ async function runScan() {
   $("scan-summary").textContent = `${universe.length} przeskanowanych, ${errors} bez danych · ${dt} sek`;
   log(`Zakończono w ${dt} sek. ${currentSignals.length} sygnałów. ${errors} błędów / brak danych.`, "ok");
 
-  // If most tickers failed, show actionable guidance.
   const errRate = universe.length > 0 ? errors / universe.length : 0;
   if (errRate > 0.5) {
     const tip = document.createElement("div");
@@ -1316,18 +1297,15 @@ async function runScan() {
     if (cfg.source === "stooq") {
       tip.innerHTML =
         `<b>${errors} z ${universe.length} tickerów bez danych.</b> ` +
-        `Stooq blokowany przez Twoją sieć (firewall / CORS-proxy też nie przeszły). ` +
-        `Najszybsza naprawa: zarejestruj się na <a href="https://twelvedata.com/register" target="_blank" rel="noopener" style="color:#88c0d0">twelvedata.com</a> ` +
-        `(darmowo, ~30 sek), wklej klucz API w polu "Klucz Twelve Data" wyżej, ` +
-        `zmień <b>Źródło danych</b> na "Twelve Data" i kliknij Skanuj ponownie.`;
+        `Stooq blokowany przez Twoją sieć. Najszybsza naprawa: <a href="https://twelvedata.com/register" target="_blank" rel="noopener" style="color:#88c0d0">twelvedata.com</a>, klucz API, zmień Źródło na "Twelve Data".`;
     } else if (cfg.source === "twelvedata") {
       tip.innerHTML =
         `<b>${errors} z ${universe.length} tickerów bez danych.</b> ` +
-        `Sprawdź czy klucz Twelve Data jest poprawny i nie wyczerpałeś dziennego limitu (free tier: 800/dzień).`;
+        `Sprawdź klucz Twelve Data lub czy nie wyczerpałeś limitu (free tier: 800/dzień).`;
     } else {
       tip.innerHTML =
-        `<b>${errors} z ${universe.length} tickerów bez danych w plikach CSV.</b> ` +
-        `Sprawdź czy nazwy plików odpowiadają tickerom (np. <code>AAPL.csv</code>) i czy CSV mają min. 365 wierszy.`;
+        `<b>${errors} z ${universe.length} tickerów bez danych w CSV.</b> ` +
+        `Sprawdź czy nazwy plików = tickerom i CSV mają min. 365 wierszy.`;
     }
     $("progress-panel").appendChild(tip);
   }
@@ -1338,9 +1316,8 @@ async function runScan() {
   $("save-btn").disabled = currentSignals.length === 0;
   scanInProgress = false;
 
-  // Auto-scan scheduling: prefer specific time-of-day; fall back to interval.
   if (!aborted) {
-    const dailyTime = $("daily-time").value; // "HH:MM"
+    const dailyTime = $("daily-time").value;
     const rescanMin = parseInt($("rescan-min").value, 10) || 0;
     if (dailyTime && /^\d{1,2}:\d{2}$/.test(dailyTime)) {
       const [hh, mm] = dailyTime.split(":").map(Number);
@@ -1358,7 +1335,7 @@ async function runScan() {
 }
 
 // ===========================================================================
-//  JOURNAL — record signals + measure effectiveness at 5d / 10d / 21d
+//  JOURNAL
 // ===========================================================================
 const JOURNAL_KEY = "wyck_journal_v1";
 
@@ -1382,7 +1359,6 @@ function genId() {
     : "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
 }
 
-// Add a fresh signal to the journal; dedupe by (ticker, scanDate)
 function addToJournal(sig) {
   const journal = loadJournal();
   if (journal.some(j => j.ticker === sig.ticker && j.scanDate === sig.scanDate)) return false;
@@ -1410,9 +1386,6 @@ function updateJournalCount() {
   if (el) el.textContent = String(loadJournal().length);
 }
 
-// --- Outcome evaluation ---------------------------------------------------
-// Walk forward through post-signal bars and classify the outcome.
-// Conservative: if same bar touches both SL and TP, count as stopped.
 function classifyOutcome(barsAfter, sl, tp1, tp2) {
   let result = "open";
   let resultDay = barsAfter.length;
@@ -1434,7 +1407,6 @@ async function evaluateEntry(entry, fetcher) {
   catch (e) { return { error: e.message }; }
   if (!bars || bars.length === 0) return { error: "brak danych" };
 
-  // Find scanDate index, or the closest preceding bar
   let scanIdx = bars.findIndex(b => b.date === entry.scanDate);
   if (scanIdx < 0) {
     for (let i = 0; i < bars.length; i++) {
@@ -1485,7 +1457,6 @@ async function reEvaluateAll() {
                 : source === "csv"        ? fetchFromCsv
                 : fetchStooq;
 
-  // Skip entries where ALL horizons are already final (stopped or won, full bars)
   const needsUpdate = journal.filter(e => {
     return ["d5", "d10", "d21"].some(h => {
       const o = e.outcomes[h];
@@ -1522,7 +1493,6 @@ async function reEvaluateAll() {
   renderJournal();
 }
 
-// --- Aggregate statistics --------------------------------------------------
 function aggregateStats(journal, horizon) {
   const ev = journal.filter(j => j.outcomes[horizon] && j.outcomes[horizon].result);
   if (ev.length === 0) return null;
@@ -1567,7 +1537,6 @@ function aggregateByScoreBucket(journal, horizon) {
   });
 }
 
-// --- Rendering ------------------------------------------------------------
 function statColorCls(winRate) {
   if (winRate >= 70) return "";
   if (winRate >= 50) return "mid";
@@ -1689,7 +1658,6 @@ function renderJournal() {
   updateJournalCount();
 }
 
-// --- Import / Export -------------------------------------------------------
 function exportJournal() {
   const journal = loadJournal();
   if (journal.length === 0) { setJournalStatus("Dziennik jest pusty."); return; }
@@ -1745,7 +1713,6 @@ function clearJournal() {
   renderJournal();
 }
 
-// --- Tab switching --------------------------------------------------------
 function switchTab(name) {
   document.querySelectorAll(".tab").forEach(t =>
     t.classList.toggle("active", t.dataset.tab === name));
@@ -1794,7 +1761,6 @@ $("test-btn").addEventListener("click", () => {
 $("export-btn").addEventListener("click", exportCsv);
 $("save-btn").addEventListener("click", saveReport);
 
-// Journal tab wiring
 document.querySelectorAll(".tab").forEach(t =>
   t.addEventListener("click", () => switchTab(t.dataset.tab)));
 $("evaluate-btn").addEventListener("click", () => {
@@ -1811,16 +1777,12 @@ $("journal-filter").addEventListener("change", renderJournal);
 $("journal-search").addEventListener("input", renderJournal);
 updateJournalCount();
 
-// Persist config in localStorage
 const PERSIST = ["nav", "position-usd", "minrr", "minscore", "universe", "source", "tdkey", "finkey", "rescan-min", "daily-time"];
 try {
   for (const id of PERSIST) {
     const v = localStorage.getItem("wyck_" + id);
     if (v != null) $(id).value = v;
   }
-  // Persist on "input" (fires on every keystroke + paste) and "change" (fallback).
-  // Earlier we only listened to "change" which fires on blur — so a paste-then-immediate-click
-  // could lose the key. "input" fixes that for text/password fields.
   for (const id of PERSIST) {
     const save = () => { try { localStorage.setItem("wyck_" + id, $(id).value); } catch (e) {} };
     $(id).addEventListener("input", save);
@@ -1828,11 +1790,8 @@ try {
   }
   $("universe").dispatchEvent(new Event("change"));
   $("source").dispatchEvent(new Event("change"));
-} catch (e) { /* localStorage might be blocked */ }
+} catch (e) {}
 
-// ?autoscan=1 — Task Scheduler can launch the page and we kick off the scan
-// automatically. We wait 1.5 s so config (loaded from localStorage above) is
-// fully wired before clicking.
 if (new URLSearchParams(location.search).get("autoscan") === "1") {
   setTimeout(() => {
     log("Autostart przez ?autoscan=1 — uruchamiam skan.", "ok");
