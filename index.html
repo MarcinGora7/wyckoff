@@ -450,6 +450,9 @@ footer.bottom {
         <option value="wins">Tylko TP1/TP2 hit</option>
         <option value="losses">Tylko stop loss</option>
         <option value="open">Tylko otwarte / pending</option>
+        <option value="intact">Spring trzyma (on track)</option>
+        <option value="broken">Spring złamany</option>
+        <option value="warning">Ostrzeżenia</option>
       </select>
       <span id="journal-table-status" style="font-size: 13px; color: #6b7a8c; margin-left: auto;"></span>
     </div>
@@ -1690,6 +1693,105 @@ function classifyOutcome(barsAfter, sl, tp1, tp2) {
   return { result, resultDay };
 }
 
+// Wyckoff Spring integrity check — beyond simple SL/TP, evaluates whether
+// the Wyckoff structural assumptions still hold (Spring low intact, higher
+// lows forming, SOS reached) or whether the formation has been invalidated.
+function checkSetupIntegrity(entry, bars) {
+  if (!bars || bars.length === 0) return null;
+  let scanIdx = bars.findIndex(b => b.date === entry.scanDate);
+  if (scanIdx < 0) {
+    for (let i = 0; i < bars.length; i++) {
+      if (bars[i].date > entry.scanDate) break;
+      scanIdx = i;
+    }
+  }
+  if (scanIdx < 0) return null;
+  const post = bars.slice(scanIdx + 1);
+  if (post.length === 0) {
+    return { status: "fresh", reasons: ["brak nowych sesji od sygnału"], intact: true,
+             daysSince: 0, lastChecked: new Date().toISOString() };
+  }
+
+  let springViolated = false, springViolDay = null;
+  let slHit = false, slHitDay = null;
+  let tp1Hit = false, tp1Day = null;
+  let tp2Hit = false, tp2Day = null;
+  let sosFormed = false, sosDay = null;
+  let lowestLow = Infinity, highestHigh = -Infinity;
+
+  const springLow = entry.springLow || entry.sl + (entry.entry - entry.sl) * 0.3;
+  const trResistance = entry.trResistance || entry.tp1;
+
+  for (let i = 0; i < post.length; i++) {
+    const b = post[i];
+    if (b.close < springLow && !springViolated)        { springViolated = true; springViolDay = i + 1; }
+    if (b.low <= entry.sl && !slHit)                   { slHit = true; slHitDay = i + 1; }
+    if (b.high >= entry.tp1 && !tp1Hit)                { tp1Hit = true; tp1Day = i + 1; }
+    if (b.high >= entry.tp2 && !tp2Hit)                { tp2Hit = true; tp2Day = i + 1; }
+    if (b.close > trResistance && !sosFormed)          { sosFormed = true; sosDay = i + 1; }
+    if (b.low < lowestLow)   lowestLow = b.low;
+    if (b.high > highestHigh) highestHigh = b.high;
+  }
+
+  const lastBar = post[post.length - 1];
+  const daysSince = post.length;
+  let status, reasons = [];
+
+  if (tp2Hit) {
+    status = "tp2_hit";
+    reasons.push(`TP2 $${entry.tp2.toFixed(2)} osiągnięty w d${tp2Day} — pełen sukces`);
+  } else if (slHit) {
+    status = "broken_sl";
+    reasons.push(`SL $${entry.sl.toFixed(2)} dotknięty w d${slHitDay} — trade zamknięty na stracie`);
+  } else if (springViolated) {
+    status = "broken_spring";
+    reasons.push(`Close $${post[springViolDay-1].close.toFixed(2)} < Spring low $${springLow.toFixed(2)} w d${springViolDay} — Spring nieważny`);
+  } else if (tp1Hit && sosFormed) {
+    status = "tp1_sos";
+    reasons.push(`TP1 $${entry.tp1.toFixed(2)} osiągnięty w d${tp1Day}, SOS (close > TR top $${trResistance.toFixed(2)}) w d${sosDay}`);
+  } else if (tp1Hit) {
+    status = "tp1_hit";
+    reasons.push(`TP1 $${entry.tp1.toFixed(2)} osiągnięty w d${tp1Day} — częściowy zysk`);
+  } else if (sosFormed) {
+    status = "sos_active";
+    reasons.push(`SOS confirmed — close > TR resistance $${trResistance.toFixed(2)} w d${sosDay} (Phase D rozpoczęta)`);
+  } else {
+    // No decisive action yet — check warning signs
+    const distToSL = (lastBar.close - entry.sl) / Math.max(0.01, entry.entry - entry.sl);
+    const distToSpringLow = (lastBar.close - springLow) / Math.max(0.01, entry.entry - springLow);
+    const lowsHigher = lowestLow > springLow * 1.005;  // 0.5% buffer
+
+    if (distToSL < 0.20) {
+      status = "warning_sl";
+      reasons.push(`Cena bardzo blisko SL — buffer ${(distToSL * 100).toFixed(0)}% (close $${lastBar.close.toFixed(2)} vs SL $${entry.sl.toFixed(2)})`);
+    } else if (distToSpringLow < 0.30) {
+      status = "warning_spring";
+      reasons.push(`Cena testuje Spring low — buffer ${(distToSpringLow * 100).toFixed(0)}%`);
+    } else if (!lowsHigher && daysSince > 7) {
+      status = "warning_lows";
+      reasons.push(`Brak higher-lows po ${daysSince} sesjach — brak progresji markup`);
+    } else {
+      status = "on_track";
+      reasons.push(`Spring trzyma — lowest-low $${lowestLow.toFixed(2)} > Spring low $${springLow.toFixed(2)}`);
+      if (lowsHigher) reasons.push(`Higher-lows obecne — markup w toku`);
+      reasons.push(`Last close $${lastBar.close.toFixed(2)}, ${daysSince} sesji od sygnału`);
+    }
+  }
+
+  return {
+    status,
+    reasons,
+    intact:   !["broken_sl", "broken_spring"].includes(status),
+    isClosed:  ["tp2_hit", "broken_sl", "broken_spring", "tp1_sos"].includes(status),
+    daysSince,
+    lastChecked: new Date().toISOString(),
+    lastClose:   lastBar.close,
+    lastDate:    lastBar.date,
+    lowestLow, highestHigh,
+    flags: { tp1Hit, tp2Hit, sosFormed, springViolated, slHit },
+  };
+}
+
 async function evaluateEntry(entry, fetcher) {
   let bars;
   try { bars = await fetcher(entry.ticker); }
@@ -1733,7 +1835,9 @@ async function evaluateEntry(entry, fetcher) {
       evaluatedAt: new Date().toISOString(),
     };
   }
-  return out;
+  // Wyckoff Spring integrity (independent of d5/d10/d21 windows)
+  const integrity = checkSetupIntegrity(entry, bars);
+  return { outcomes: out, integrity };
 }
 
 async function reEvaluateAll() {
@@ -1773,7 +1877,10 @@ async function reEvaluateAll() {
   const tasks = needsUpdate.map(e => limiter.run(async () => {
     const r = await evaluateEntry(e, fetcher);
     if (r.error) errors++;
-    else e.outcomes = { ...e.outcomes, ...r };
+    else {
+      if (r.outcomes) e.outcomes = { ...e.outcomes, ...r.outcomes };
+      if (r.integrity) e.integrity = r.integrity;
+    }
     done++;
     setJournalStatus(`Aktualizuję ${done} / ${needsUpdate.length}…`);
   }));
@@ -1897,14 +2004,43 @@ function renderJournalTable(journal) {
     entries = entries.filter(e => e.outcomes[horizon] && e.outcomes[horizon].result === "stopped");
   if (filter === "open")
     entries = entries.filter(e => !e.outcomes[horizon] || e.outcomes[horizon].result === "open");
+  if (filter === "intact")
+    entries = entries.filter(e => e.integrity && e.integrity.intact && !e.integrity.isClosed && !e.integrity.status.startsWith("warning"));
+  if (filter === "broken")
+    entries = entries.filter(e => e.integrity && !e.integrity.intact);
+  if (filter === "warning")
+    entries = entries.filter(e => e.integrity && e.integrity.status.startsWith("warning"));
 
   entries.sort((a, b) => (b.scanDate || "").localeCompare(a.scanDate || ""));
   $("journal-table-status").textContent = `${entries.length} z ${journal.length} wpisów`;
 
   if (entries.length === 0) {
     $("journal-table").innerHTML =
-      `<tr><td colspan="9" style="text-align: center; padding: 30px;" class="muted">Brak wpisów spełniających filtr.</td></tr>`;
+      `<tr><td colspan="10" style="text-align: center; padding: 30px;" class="muted">Brak wpisów spełniających filtr.</td></tr>`;
     return;
+  }
+
+  // Integrity status badge → colored, with tooltip showing reasons
+  function integrityBadge(e) {
+    const it = e.integrity;
+    if (!it) return '<span class="muted" title="brak weryfikacji">— niesprawdzone</span>';
+    const s = it.status;
+    const styles = {
+      tp2_hit:        ['#a3be8c', 'TP2 ✓'],
+      tp1_sos:        ['#a3be8c', 'TP1 + SOS ✓'],
+      tp1_hit:        ['#a3be8c', 'TP1 ✓'],
+      sos_active:     ['#88c0d0', 'SOS aktywny'],
+      on_track:       ['#88c0d0', 'Spring trzyma'],
+      fresh:          ['#8fbcbb', 'Świeży'],
+      warning_sl:     ['#ebcb8b', '⚠ blisko SL'],
+      warning_spring: ['#ebcb8b', '⚠ testuje Spring'],
+      warning_lows:   ['#ebcb8b', '⚠ brak progresji'],
+      broken_spring:  ['#bf616a', '✗ Spring złamany'],
+      broken_sl:      ['#bf616a', '✗ Stop loss'],
+    };
+    const [color, label] = styles[s] || ['#6b7a8c', s];
+    const tooltip = (it.reasons || []).join(' · ') + ` (sprawdzone: ${(it.lastChecked || '').slice(0, 10)})`;
+    return `<span style="color: ${color}; font-weight: 500;" title="${esc(tooltip)}">${label}</span>`;
   }
 
   const rows = entries.map(e => {
@@ -1930,6 +2066,7 @@ function renderJournalTable(journal) {
       <td>${outcomeCell}</td>
       <td>${pctCell}</td>
       <td>${rCell}</td>
+      <td>${integrityBadge(e)}</td>
     </tr>`;
   });
 
@@ -1938,6 +2075,7 @@ function renderJournalTable(journal) {
       <th>Ticker</th><th>Data sygnału</th><th>Score</th>
       <th>Entry</th><th>SL</th><th>R:R2</th>
       <th>Wynik</th><th>Zwrot</th><th>R multiple</th>
+      <th>Status formacji</th>
     </tr></thead>
     <tbody>${rows.join("")}</tbody>
   `;
