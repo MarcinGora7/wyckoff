@@ -689,13 +689,213 @@ function buildSignal(ticker, bars, tr, spring, cfg) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Wyckoff phase detection — identifies PS, SC, AR, ST, LPS, SOS in the bar
+// history so the chart in the PDF can mark each structural element.
+// ---------------------------------------------------------------------------
+function findSellingClimax(bars, tr, avgVol30, atrs) {
+  // SC: earliest high-volume capitulation bar in the TR area.
+  // Criteria: wide range (>= 1.3x ATR), high volume (>= 1.5x avg30),
+  //           near support, recovery off the lows.
+  const trStart = Math.max(15, bars.length - W.TR_WINDOW - W.TR_EXCLUDE_RECENT);
+  const trEnd = Math.max(trStart, bars.length - W.TR_EXCLUDE_RECENT - 30);
+  let best = null;
+  for (let i = trStart; i < trEnd && i < bars.length; i++) {
+    const bar = bars[i];
+    const atrVal = atrs[i];
+    if (!atrVal) continue;
+    const volRatio = bar.volume / avgVol30;
+    if (volRatio < 1.5) continue;
+    const range = bar.high - bar.low;
+    if (range < atrVal * 1.3) continue;
+    const distFromSup = Math.abs(bar.low - tr.support) / tr.support;
+    if (distFromSup > 0.06) continue;
+    const closePos = range > 0 ? (bar.close - bar.low) / range : 0;
+    if (closePos < 0.25) continue;
+    if (!best || volRatio > best.volRatio) {
+      best = {
+        date: bar.date, idx: i, low: bar.low, high: bar.high, close: bar.close,
+        volRatio, atrMultiple: range / atrVal, closePos,
+      };
+    }
+  }
+  return best;
+}
+
+function findPreliminarySupport(bars, sc, avgVol30) {
+  // PS: first significant volume increase BEFORE the SC.
+  if (!sc) return null;
+  const start = Math.max(0, sc.idx - 40);
+  for (let i = start; i < sc.idx; i++) {
+    const bar = bars[i];
+    const volRatio = bar.volume / avgVol30;
+    if (volRatio >= 1.3) {
+      return { date: bar.date, idx: i, low: bar.low, volRatio,
+               barsBeforeSc: sc.idx - i };
+    }
+  }
+  return null;
+}
+
+function findAutomaticRally(bars, sc, tr) {
+  // AR: high after SC, defines TR resistance.
+  if (!sc) return null;
+  const end = Math.min(bars.length, sc.idx + 31);
+  let best = { high: -Infinity, idx: -1 };
+  for (let i = sc.idx + 1; i < end; i++) {
+    if (bars[i].high > best.high) { best = { high: bars[i].high, idx: i }; }
+  }
+  if (best.idx < 0) return null;
+  const bar = bars[best.idx];
+  return {
+    date: bar.date, idx: best.idx, high: bar.high,
+    distFromResistance: Math.abs(bar.high - tr.resistance) / tr.resistance * 100,
+    barsSinceSc: best.idx - sc.idx,
+  };
+}
+
+function findSecondaryTest(bars, sc, ar, avgVol30) {
+  // ST: test of SC low after AR, ideally with LOWER volume than SC.
+  if (!sc || !ar) return null;
+  const end = Math.min(bars.length, ar.idx + 80);
+  let best = { low: Infinity, idx: -1 };
+  for (let i = ar.idx + 1; i < end; i++) {
+    if (bars[i].low < best.low) { best = { low: bars[i].low, idx: i }; }
+  }
+  if (best.idx < 0) return null;
+  const bar = bars[best.idx];
+  const distFromSc = Math.abs(bar.low - sc.low) / sc.low;
+  if (distFromSc > 0.10) return null;
+  const stVolRatio = bar.volume / avgVol30;
+  return {
+    date: bar.date, idx: best.idx, low: bar.low, volRatio: stVolRatio,
+    higherLowThanSc: bar.low > sc.low,
+    lowerVolThanSc: stVolRatio < sc.volRatio,
+    barsSinceAr: best.idx - ar.idx,
+  };
+}
+
+function findLastPointOfSupport(bars, spring, avgVol30) {
+  // LPS: low between Spring and current bar, ideally higher than Spring low
+  // and on lower volume.
+  if (!spring) return null;
+  const springIdx = bars.findIndex(b => b.date === spring.barDate);
+  if (springIdx < 0 || springIdx >= bars.length - 2) return null;
+  let best = { low: Infinity, idx: -1 };
+  for (let i = springIdx + 1; i < bars.length; i++) {
+    if (bars[i].low < best.low && bars[i].low > spring.barLow) {
+      best = { low: bars[i].low, idx: i };
+    }
+  }
+  if (best.idx < 0) return null;
+  const bar = bars[best.idx];
+  const volRatio = bar.volume / avgVol30;
+  return {
+    date: bar.date, idx: best.idx, low: bar.low, volRatio,
+    higherThanSpring: bar.low > spring.barLow,
+    lowVol: volRatio < 1.0,
+    barsSinceSpring: best.idx - springIdx,
+  };
+}
+
+function checkSignOfStrength(bars, tr) {
+  // SOS: any recent bar breaking decisively above TR resistance.
+  const recent = bars.slice(-7);
+  const offset = bars.length - recent.length;
+  for (let i = 0; i < recent.length; i++) {
+    const bar = recent[i];
+    if (bar.close > tr.resistance * 1.005) {
+      return { date: bar.date, idx: offset + i, close: bar.close,
+               aboveResistancePct: (bar.close - tr.resistance) / tr.resistance * 100 };
+    }
+  }
+  return null;
+}
+
+function analyzeWyckoffStructure(bars, tr, spring) {
+  const atrs = atrSeries(bars, W.ATR_PERIOD);
+  const avgVol30 = bars.slice(-W.VOL_AVG_PERIOD).map(b => b.volume).reduce((a, b) => a + b, 0) / W.VOL_AVG_PERIOD;
+  const sc = findSellingClimax(bars, tr, avgVol30, atrs);
+  const ps = findPreliminarySupport(bars, sc, avgVol30);
+  const ar = findAutomaticRally(bars, sc, tr);
+  const st = findSecondaryTest(bars, sc, ar, avgVol30);
+  const lps = findLastPointOfSupport(bars, spring, avgVol30);
+  const sos = checkSignOfStrength(bars, tr);
+
+  // Quality assessment per element (0-100 each), then combined.
+  const elements = [];
+  // PS — 10 pts
+  elements.push({
+    code: 'PS', name: 'Preliminary Support',
+    found: !!ps, weight: 10,
+    quality: ps ? Math.min(100, 50 + ps.volRatio * 25) : 0,
+    detail: ps ? `${ps.date}, vol ${ps.volRatio.toFixed(2)}x, ${ps.barsBeforeSc}d przed SC` : 'Nie wykryty',
+  });
+  // SC — 20 pts
+  elements.push({
+    code: 'SC', name: 'Selling Climax',
+    found: !!sc, weight: 20,
+    quality: sc ? Math.min(100, sc.volRatio * 30 + sc.atrMultiple * 15 + sc.closePos * 30) : 0,
+    detail: sc ? `${sc.date}, vol ${sc.volRatio.toFixed(2)}x, range ${sc.atrMultiple.toFixed(2)}x ATR, close pos ${(sc.closePos * 100).toFixed(0)}%` : 'Nie wykryty',
+  });
+  // AR — 15 pts
+  elements.push({
+    code: 'AR', name: 'Automatic Rally',
+    found: !!ar, weight: 15,
+    quality: ar ? Math.max(0, 100 - ar.distFromResistance * 5) : 0,
+    detail: ar ? `${ar.date}, high $${ar.high.toFixed(2)}, ${ar.distFromResistance.toFixed(1)}% od TR top` : 'Nie wykryty',
+  });
+  // ST — 15 pts
+  elements.push({
+    code: 'ST', name: 'Secondary Test',
+    found: !!st, weight: 15,
+    quality: st ? (st.higherLowThanSc ? 50 : 30) + (st.lowerVolThanSc ? 50 : 0) : 0,
+    detail: st ? `${st.date}, vol ${st.volRatio.toFixed(2)}x, ${st.higherLowThanSc ? 'wyzsze low ✓' : 'nizsze low'}, ${st.lowerVolThanSc ? 'nizszy vol ✓' : 'WYZSZY vol'}` : 'Nie wykryty',
+  });
+  // Spring — 20 pts (already strong score from main detector)
+  elements.push({
+    code: 'Spring', name: 'Spring (Phase C)',
+    found: !!spring, weight: 20,
+    quality: spring ? spring.score : 0,
+    detail: spring ? `${spring.barDate}, penetracja ${spring.penetrationPct.toFixed(2)}%, vol ${spring.volumeRatio.toFixed(2)}x, score ${spring.score}/100` : 'Nie wykryty',
+  });
+  // LPS — 10 pts
+  elements.push({
+    code: 'LPS', name: 'Last Point of Support',
+    found: !!lps, weight: 10,
+    quality: lps ? (lps.higherThanSpring ? 50 : 25) + (lps.lowVol ? 50 : 20) : 0,
+    detail: lps ? `${lps.date}, ${lps.higherThanSpring ? 'wyzsze low niz Spring ✓' : 'nizsze low'}, vol ${lps.volRatio.toFixed(2)}x` : 'Brak (jeszcze nie uformowany)',
+  });
+  // SOS — 10 pts
+  elements.push({
+    code: 'SOS', name: 'Sign of Strength',
+    found: !!sos, weight: 10,
+    quality: sos ? Math.min(100, 60 + sos.aboveResistancePct * 20) : 0,
+    detail: sos ? `${sos.date}, +${sos.aboveResistancePct.toFixed(1)}% nad TR resistance ✓` : 'Brak (wybicia jeszcze nie ma)',
+  });
+
+  // Weighted overall quality
+  const totalWeight = elements.reduce((a, e) => a + e.weight, 0);
+  const weightedScore = elements.reduce((a, e) => a + (e.quality * e.weight), 0) / totalWeight;
+
+  return {
+    ps, sc, ar, st, lps, sos,
+    elements,
+    overallQuality: Math.round(weightedScore),
+    foundCount: elements.filter(e => e.found).length,
+  };
+}
+
 function analyze(ticker, bars, cfg) {
   if (!bars || bars.length < W.MIN_BARS) return null;
   const tr = identifyTradingRange(bars);
   if (!tr) return null;
   const spring = detectSpring(bars, tr, cfg.minScore);
   if (!spring) return null;
-  return buildSignal(ticker, bars, tr, spring, cfg);
+  const sig = buildSignal(ticker, bars, tr, spring, cfg);
+  if (!sig) return null;
+  sig.structure = analyzeWyckoffStructure(bars, tr, spring);
+  return sig;
 }
 
 // ===========================================================================
@@ -807,6 +1007,7 @@ async function fetchFromCsv(ticker) {
   if (!bars) throw new Error("brak pliku CSV");
   return bars;
 }
+
 // ===========================================================================
 //  CONNECTIVITY TEST — probes each data source to tell the user
 //  what actually works from their network.
@@ -922,11 +1123,12 @@ async function fetchStory(ticker, key) {
   const end90 = new Date(end.getTime() + 90 * 86400000);
 
   // Parallel fetch
-  const [news, earnings, insider, recom] = await Promise.all([
+  const [news, earnings, insider, recom, metricsResp] = await Promise.all([
     finnhub("/company-news", { symbol: ticker, from: isoDate(start21), to: isoDate(end) }, key).catch(() => []),
     finnhub("/calendar/earnings", { symbol: ticker, from: isoDate(start120), to: isoDate(end90) }, key).catch(() => null),
     finnhub("/stock/insider-transactions", { symbol: ticker, from: isoDate(start90), to: isoDate(end) }, key).catch(() => null),
     finnhub("/stock/recommendation", { symbol: ticker }, key).catch(() => null),
+    finnhub("/stock/metric", { symbol: ticker, metric: "all" }, key).catch(() => null),
   ]);
 
   const story = {
@@ -989,6 +1191,8 @@ async function fetchStory(ticker, key) {
   }
 
   story.catalysts = [...story.catalysts].sort();
+  // Fundamentals (P/B, P/E, debt/equity, 52w high/low, beta, current ratio) for Klarman scorecard
+  story.metrics = metricsResp && metricsResp.metric ? metricsResp.metric : null;
   return story;
 }
 
@@ -1096,10 +1300,24 @@ function renderSignal(s) {
   const card = document.createElement("article");
   card.className = "signal " + rowClass(s.setupScore);
   const sigIdx = currentSignals.indexOf(s);
+  // Conviction tier (Wyck X% · Klar X/20 · TN ***)
+  const wyckPct = s.structure ? s.structure.overallQuality : s.setupScore;
+  const klarmanScorecard = computeKlarmanScorecard(s);
+  const klarTotal = klarmanScorecard.total;
+  const klarMax = klarmanScorecard.maxPossible;
+  // Convert Klarman 0-20 score to 0-40 contribution for conviction tier
+  const klarContribution = (klarTotal / 20) * 40;
+  const convTotal = Math.round(Math.min(100, (s.structure ? s.structure.overallQuality * 0.4 : s.setupScore * 0.4) + klarContribution + Math.min(15, s.rr2 * 2.5) + (s.followThrough === true ? 5 : 0)));
+  const tier = convTotal >= 85 ? "T1" : convTotal >= 70 ? "T2" : convTotal >= 55 ? "T3" : "T4";
+  const stars = convTotal >= 85 ? "★★★" : convTotal >= 70 ? "★★" : convTotal >= 55 ? "★" : "";
+  const tierColor = convTotal >= 85 ? "#a3be8c" : convTotal >= 70 ? "#88c0d0" : convTotal >= 55 ? "#ebcb8b" : "#bf616a";
   card.innerHTML = `
     <header class="sig-head">
       <div>
         <h3>${esc(s.ticker)} <small>${esc(s.name)}</small></h3>
+        <div class="sig-meta" style="font-weight: 500;">
+          <span style="color: ${tierColor};">Wyck <b>${wyckPct}%</b> · Klar <b>${klarTotal}/${klarMax}</b> · ${tier} ${stars}</span>
+        </div>
         <div class="sig-meta">
           ${esc(s.sector || "—")} ·
           Score <b>${s.setupScore}/100</b> ·
@@ -1145,6 +1363,16 @@ function renderSignal(s) {
     <section class="tr-block">
       <div><b>Trading Range:</b> $${s.trSupport.toFixed(2)} — $${s.trResistance.toFixed(2)}  (${s.trHeightPct.toFixed(1)}% szerokości)</div>
       <div><b>Spring:</b> low $${s.springLow.toFixed(2)} (penetracja ${s.penetrationPct.toFixed(2)}%), close $${s.springClose.toFixed(2)}, wolumen ${s.springVolumeRatio.toFixed(2)}× śr.</div>
+      ${s.structure ? `
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #2e3a4a;">
+        <b>Struktura Wyckoff:</b> ${s.structure.foundCount}/7 elementów wykrytych ·
+        <b style="color: ${s.structure.overallQuality >= 70 ? '#a3be8c' : s.structure.overallQuality >= 50 ? '#ebcb8b' : '#bf616a'}">jakość ${s.structure.overallQuality}/100</b>
+        <div style="font-size: 12px; margin-top: 4px; color: #a8b5c8;">
+          ${s.structure.elements.map(e =>
+            `<span style="display: inline-block; margin-right: 8px;">${e.found ? '✓' : '✗'} ${e.code}</span>`
+          ).join("")}
+        </div>
+      </div>` : ""}
     </section>
     <section class="story">
       <h4>Story / catalyst</h4>
@@ -1765,42 +1993,280 @@ function switchTab(name) {
 //  PDF — Klarman compliance + actual chart + theoretical reference
 // ===========================================================================
 
-// Klarman's value-investing rules adapted to a Wyckoff Spring trade context.
-const KLARMAN_RULES = [
-  { name: "Capital preservation first (Margin of Safety)",
-    test: s => s.rr2 >= 3,
-    detail: s => `R:R do TP2 = ${s.rr2.toFixed(2)}:1` },
-  { name: "Risk-defined trade (hard stop loss)",
-    test: s => s.sl > 0 && s.riskPerShare > 0,
-    detail: s => `SL @ $${s.sl} (-$${s.riskPerShare}/sh, total $${s.capitalAtRiskUsd.toLocaleString()})` },
-  { name: "Position sizing pod limit ryzyka",
-    test: s => s.riskPctOfNav < 1,
-    detail: s => `Ryzyko vs NAV = ${s.riskPctOfNav.toFixed(3)}%` },
-  { name: "Brak lewara (cash trade tylko)",
-    test: s => s.positionValueUsd <= s.capitalAtRiskUsd * 200,
-    detail: s => `Pozycja $${s.positionValueUsd.toLocaleString()} (no leverage)` },
-  { name: "Niezalezna teza — catalyst potwierdzony",
-    test: s => s.story && s.story.catalysts && s.story.catalysts.length > 0,
-    detail: s => (s.story && s.story.catalysts && s.story.catalysts.length > 0)
-                  ? `Catalysts: ${s.story.catalysts.join(', ')}` : "Brak wyraznego katalizatora" },
-  { name: "Strukturalny setup (nie chasing)",
-    test: s => s.setupScore >= 60,
-    detail: s => `Setup score ${s.setupScore}/100` },
-  { name: "Potwierdzenie price action (follow-through)",
-    test: s => s.followThrough === true,
-    detail: s => s.followThrough === true ? "Follow-through potwierdzone"
-              : s.followThrough === false ? "Brak follow-through"
-              : "Pending (Spring dzisiaj)" },
-  { name: "Patience — swiezy setup, nie spozniony",
-    test: s => s.barsSinceSpring <= 3,
-    detail: s => `Spring ${s.barsSinceSpring} dni temu` },
-  { name: "Asymmetric upside (R:R >= 3)",
-    test: s => s.rr2 >= 3,
-    detail: s => `R:R TP2 = ${s.rr2.toFixed(2)}` },
-  { name: "Plan exit zdefiniowany (TP1 + TP2)",
-    test: s => s.tp1 > 0 && s.tp2 > 0,
-    detail: s => `TP1 $${s.tp1}, TP2 $${s.tp2}` },
+// Seth Klarman 10-rule scorecard. Each rule scored 0-2 pts (max 20).
+// Uses Finnhub fundamentals (P/E, P/B, D/E, 52w high/low, beta) when available;
+// rules that can't be evaluated without metrics return null and are excluded
+// from the max-possible denominator.
+const KLARMAN_SCORECARD_META = [
+  { n: 1,  name: "Ochrona kapitału",        q: "Czy ryzyko bankructwa lub trwałej utraty wartości jest bliskie zeru?" },
+  { n: 2,  name: "Margines bezpieczeństwa", q: "Czy cena akcji jest co najmniej 30-50% poniżej konserwatywnej wartości wewnętrznej?" },
+  { n: 3,  name: "Konserwatywna wycena",    q: "Czy wycena opiera się na twardych aktywach / realnej gotówce, a nie na prognozach wzrostu?" },
+  { n: 4,  name: "Podejście przekorne",     q: "Czy spółka jest nielubiana, pomijana przez Wall Street, w sektorze z pesymizmem?" },
+  { n: 5,  name: "Analiza Bottom-Up",       q: "Czy bilans jest silny (niski dług, wysoka płynność), a biznes zrozumiały?" },
+  { n: 6,  name: "Katalizator wartości",    q: "Czy istnieje bliskie wydarzenie wymuszające na rynku dostrzeżenie realnej wartości?" },
+  { n: 7,  name: "Brak ulegania modzie",    q: "Czy spółka jest wolna od hype'u, wysokich P/E i spekulacji?" },
+  { n: 8,  name: "Realistyczne prognozy",   q: "Czy model NIE wymaga skomplikowanych prognoz technologicznych ani ciągłego wzrostu PKB?" },
+  { n: 9,  name: "Cierpliwość cenowa",      q: "Czy cena spadła do Twojego celu — zamiast kupowania 'bo giełda rośnie'?" },
+  { n: 10, name: "Jasna strategia wyjścia", q: "Czy znasz dokładną wartość fundamentalną, przy której sprzedasz?" },
 ];
+
+function computeKlarmanScorecard(s) {
+  const m = (s.story && s.story.metrics) || null;
+  const story = s.story || null;
+  const p = s.price;
+  function gm(k) { return m && m[k] != null ? Number(m[k]) : null; }
+
+  const de    = gm("totalDebt/totalEquityAnnual");
+  const cr    = gm("currentRatioAnnual");
+  const pb    = gm("pbAnnual");
+  const pe    = gm("peNormalizedAnnual");
+  const beta  = gm("beta");
+  const h52   = gm("52WeekHigh");
+  const l52   = gm("52WeekLow");
+  const analystBuyPct = story ? story.analystBuyPct : null;
+
+  const rules = [];
+
+  // 1. Ochrona kapitału — bilans + płynność
+  let s1 = null, n1 = "Brak danych finansowych (potrzebny klucz Finnhub)";
+  if (de != null && cr != null) {
+    if (de < 0.5 && cr > 2)        { s1 = 2; n1 = `D/E ${de.toFixed(2)}, current ratio ${cr.toFixed(2)} — silny bilans, niskie ryzyko bankructwa`; }
+    else if (de < 1.0 && cr > 1.5) { s1 = 2; n1 = `D/E ${de.toFixed(2)}, CR ${cr.toFixed(2)} — bezpieczny bilans`; }
+    else if (de < 1.5 && cr > 1.2) { s1 = 1; n1 = `D/E ${de.toFixed(2)}, CR ${cr.toFixed(2)} — umiarkowany dług`; }
+    else                            { s1 = 0; n1 = `D/E ${de.toFixed(2)}, CR ${cr.toFixed(2)} — wysoki dług / niska płynność`; }
+  }
+  rules.push({ ...KLARMAN_SCORECARD_META[0], score: s1, note: n1 });
+
+  // 2. Margines bezpieczeństwa — P/B, P/E, dystans od 52w high
+  let s2 = null, n2 = "Brak P/B i P/E";
+  if (pb != null || pe != null) {
+    const dh = h52 ? ((h52 - p) / h52 * 100) : 0;
+    if ((pb != null && pb < 1) || (pe != null && pe > 0 && pe < 10)) { s2 = 2; n2 = `P/B ${pb?.toFixed(2) || 'n/d'}, P/E ${pe?.toFixed(1) || 'n/d'}, ${dh.toFixed(0)}% pod 52w high — duża dyskonta`; }
+    else if ((pb != null && pb < 1.5) || (pe != null && pe > 0 && pe < 15)) { s2 = 1; n2 = `P/B ${pb?.toFixed(2) || 'n/d'}, P/E ${pe?.toFixed(1) || 'n/d'} — umiarkowana dyskonta`; }
+    else                            { s2 = 0; n2 = `P/B ${pb?.toFixed(2) || 'n/d'}, P/E ${pe?.toFixed(1) || 'n/d'} — brak istotnej dyskonty`; }
+  }
+  rules.push({ ...KLARMAN_SCORECARD_META[1], score: s2, note: n2 });
+
+  // 3. Konserwatywna wycena — P/B (wycena vs book value)
+  let s3 = null, n3 = "Brak P/B";
+  if (pb != null) {
+    if (pb < 1.2)      { s3 = 2; n3 = `P/B ${pb.toFixed(2)} — wycena oparta o twarde aktywa (book value)`; }
+    else if (pb < 2.5) { s3 = 1; n3 = `P/B ${pb.toFixed(2)} — wycena umiarkowana, częściowo growth`; }
+    else                { s3 = 0; n3 = `P/B ${pb.toFixed(2)} — premium nad book value, growth assumption`; }
+  }
+  rules.push({ ...KLARMAN_SCORECARD_META[2], score: s3, note: n3 });
+
+  // 4. Podejście przekorne — daleko od 52w high + niski sentyment analityków
+  let s4 = null, n4 = "Brak danych 52w high / analityków";
+  if (h52 != null || analystBuyPct != null) {
+    const dh = h52 ? ((h52 - p) / h52 * 100) : 0;
+    let pts = 0;
+    const parts = [];
+    if (dh >= 50)      { pts += 1; parts.push(`${dh.toFixed(0)}% pod 52w high (silny pessimism)`); }
+    else if (dh >= 25) { pts += 0.5; parts.push(`${dh.toFixed(0)}% pod 52w high`); }
+    if (analystBuyPct != null && analystBuyPct < 50) { pts += 1; parts.push(`${analystBuyPct.toFixed(0)}% analityków buy (mało popularny)`); }
+    else if (analystBuyPct != null && analystBuyPct < 70) { pts += 0.5; parts.push(`${analystBuyPct.toFixed(0)}% analityków buy`); }
+    s4 = pts >= 1.5 ? 2 : pts >= 0.5 ? 1 : 0;
+    n4 = parts.length ? parts.join(", ") : "Cena blisko 52w high, popularna";
+  }
+  rules.push({ ...KLARMAN_SCORECARD_META[3], score: s4, note: n4 });
+
+  // 5. Analiza Bottom-Up — D/E, current ratio (powtórzenie quality of balance sheet)
+  let s5 = null, n5 = "Brak danych bilansowych";
+  if (de != null && cr != null) {
+    if (de < 0.5 && cr > 2)       { s5 = 2; n5 = `Silny bilans (D/E ${de.toFixed(2)}, CR ${cr.toFixed(2)}), biznes resilient`; }
+    else if (de < 1.0 && cr > 1.3) { s5 = 1; n5 = `Średni bilans — biznes funkcjonuje stabilnie`; }
+    else                            { s5 = 0; n5 = `Słaby bilans (D/E ${de.toFixed(2)}) — wrażliwość na cykl`; }
+  }
+  rules.push({ ...KLARMAN_SCORECARD_META[4], score: s5, note: n5 });
+
+  // 6. Katalizator wartości — Wyckoff Spring + Finnhub catalysts
+  let s6 = 0, n6 = "";
+  const cats = (story && story.catalysts) || [];
+  let catCount = 1; // Wyckoff Spring zawsze liczy jako katalizator price-action
+  if (cats.includes('insider buying')) catCount++;
+  if (cats.includes('earnings beat'))  catCount++;
+  if (cats.includes('analyst upgrade')) catCount++;
+  if (cats.includes('M&A activity'))   catCount++;
+  if (s.followThrough === true)        catCount++;
+  if (catCount >= 4)      s6 = 2;
+  else if (catCount >= 2) s6 = 1;
+  else                     s6 = 0;
+  n6 = `Wyckoff Spring + ${cats.length} catalyst: ${cats.join(', ') || 'brak fundamentalnych'}${s.followThrough === true ? ', FT ✓' : ''}`;
+  rules.push({ ...KLARMAN_SCORECARD_META[5], score: s6, note: n6 });
+
+  // 7. Brak ulegania modzie — P/E, beta
+  let s7 = null, n7 = "Brak P/E";
+  if (pe != null) {
+    if (pe > 0 && pe < 15 && (beta == null || beta < 1.2))      { s7 = 2; n7 = `P/E ${pe.toFixed(1)}${beta != null ? ', beta ' + beta.toFixed(2) : ''} — wartościowa, nie spekulacyjna`; }
+    else if (pe > 0 && pe < 25)                                  { s7 = 1; n7 = `P/E ${pe.toFixed(1)}${beta != null ? ', beta ' + beta.toFixed(2) : ''}`; }
+    else                                                         { s7 = 0; n7 = `P/E ${pe.toFixed(1)} — wysoka, spekulacyjna lub brak zysków`; }
+  }
+  rules.push({ ...KLARMAN_SCORECARD_META[6], score: s7, note: n7 });
+
+  // 8. Realistyczne prognozy — earnings surprise jako proxy zdrowia biznesu
+  let s8 = null, n8 = "Brak danych earnings";
+  if (story && story.lastSurprisePct != null) {
+    if (story.lastSurprisePct > 5)      { s8 = 2; n8 = `Earnings surprise +${story.lastSurprisePct.toFixed(1)}% — biznes realny, dostarcza wyniki`; }
+    else if (story.lastSurprisePct > -2) { s8 = 1; n8 = `Earnings spełnione (${story.lastSurprisePct >= 0 ? '+' : ''}${story.lastSurprisePct.toFixed(1)}%)`; }
+    else                                  { s8 = 0; n8 = `Miss earnings ${story.lastSurprisePct.toFixed(1)}% — rozjazd z oczekiwaniami`; }
+  }
+  rules.push({ ...KLARMAN_SCORECARD_META[7], score: s8, note: n8 });
+
+  // 9. Cierpliwość cenowa — dystans od 52w low (im bliżej dolka, tym lepiej)
+  let s9 = null, n9 = "Brak danych 52w low";
+  if (l52 != null) {
+    const dl = ((p - l52) / l52) * 100;
+    if (dl < 25)      { s9 = 2; n9 = `+${dl.toFixed(0)}% nad 52w low — blisko bottomu, kupujesz na tanio`; }
+    else if (dl < 60) { s9 = 1; n9 = `+${dl.toFixed(0)}% nad 52w low — w dolnej części zakresu`; }
+    else               { s9 = 0; n9 = `+${dl.toFixed(0)}% nad 52w low — daleko od dolka, niecierpliwy zakup`; }
+  }
+  rules.push({ ...KLARMAN_SCORECARD_META[8], score: s9, note: n9 });
+
+  // 10. Jasna strategia wyjścia — TP1/TP2 zawsze zdefiniowane przez Wyckoff measured-move
+  rules.push({ ...KLARMAN_SCORECARD_META[9], score: 2,
+               note: `TP1 $${s.tp1} (TR top), TP2 $${s.tp2} (measured move), R:R do TP2 = ${s.rr2.toFixed(2)}:1` });
+
+  // Aggregate
+  const scoredRules = rules.filter(r => r.score !== null);
+  const total = scoredRules.reduce((a, r) => a + r.score, 0);
+  const maxPossible = scoredRules.length * 2;
+  let interpretation;
+  if (total >= 16)      interpretation = { label: "Wyjątkowa okazja",         color: [0, 130, 0],    bg: [232, 246, 232] };
+  else if (total >= 11) interpretation = { label: "Warta głębszej analizy",   color: [180, 130, 0],  bg: [253, 247, 218] };
+  else                   interpretation = { label: "Odrzuć (zbyt wysokie ryzyko)", color: [180, 30, 30], bg: [250, 232, 232] };
+  return { rules, total, maxPossible, interpretation };
+}
+
+// Legacy compatibility wrapper for any old `KLARMAN_RULES.filter(r => r.test(s))` references.
+const KLARMAN_RULES = KLARMAN_SCORECARD_META.map(meta => ({
+  name: meta.name,
+  test: s => {
+    const sc = s._klarmanCache || (s._klarmanCache = computeKlarmanScorecard(s));
+    const r = sc.rules.find(x => x.n === meta.n);
+    return r && r.score === 2;
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Wyckoff narrative + conviction tier
+// ---------------------------------------------------------------------------
+const PL_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paz','Lis','Gru'];
+function formatPlDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return `${PL_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+function daysBetween(d1, d2) {
+  const a = new Date(d1), b = new Date(d2);
+  return Math.round(Math.abs(b - a) / 86400000);
+}
+
+// Compute conviction tier from structure quality + Klarman + R:R + confirmation
+function computeConviction(s) {
+  let score = 0;
+  if (s.structure) score += s.structure.overallQuality * 0.40;          // 0-40
+  const sc = computeKlarmanScorecard(s);
+  // Klarman 0-20 → 0-40 contribution to conviction
+  score += (sc.total / Math.max(1, sc.maxPossible)) * 40;               // 0-40
+  score += Math.min(15, s.rr2 * 2.5);                                   // 0-15
+  if (s.followThrough === true) score += 5;
+  score = Math.round(Math.min(100, score));
+
+  let tier, stars, conviction;
+  if (score >= 85)      { tier = 'T1'; stars = '***'; conviction = 'HIGH'; }
+  else if (score >= 70) { tier = 'T2'; stars = '**';  conviction = 'MEDIUM'; }
+  else if (score >= 55) { tier = 'T3'; stars = '*';   conviction = 'LOW'; }
+  else                  { tier = 'T4'; stars = '';    conviction = 'SKIP'; }
+
+  return { tier, stars, conviction, totalScore: score, klarmanScore: sc.total, klarmanMax: sc.maxPossible };
+}
+
+// Phase-by-phase Polish narrative
+function generateWyckoffNarrative(s) {
+  const st = s.structure || {};
+  const n = {};
+
+  // Kontekst
+  const stage = st.sos ? "Phase D (Markup rozpoczety)"
+              : s.followThrough === true ? "Phase C (Spring potwierdzony, czeka SOS)"
+              : "Phase C (Spring detected, pre-confirmation)";
+  n.kontekst = `Setup akumulacji Wyckoff. Obecny etap: ${stage}. ` +
+    `Trading Range $${s.trSupport.toFixed(2)} - $${s.trResistance.toFixed(2)} (${s.trHeightPct.toFixed(1)}%). ` +
+    `Wykryto ${st.foundCount || 0} z 7 elementow struktury, jakosc ${st.overallQuality || 0}/100.`;
+
+  // Phase A — Stop downtrend
+  if (st.sc) {
+    let p = `Phase A (Stop downtrend) ${formatPlDate(st.sc.date)}: `;
+    p += `Selling Climax na vol ${st.sc.volRatio.toFixed(2)}x sredniej miesiecznej, `;
+    p += `range ${st.sc.atrMultiple.toFixed(2)}x ATR, low $${st.sc.low.toFixed(2)}, `;
+    p += `close ${(st.sc.closePos * 100).toFixed(0)}% w gornej polowie zakresu (recovery off lows). `;
+    if (st.ps) p += `Poprzedzony PS ${formatPlDate(st.ps.date)} na vol ${st.ps.volRatio.toFixed(2)}x. `;
+    if (st.ar) {
+      const arGain = ((st.ar.high - st.sc.low) / st.sc.low * 100);
+      p += `Automatic Rally do $${st.ar.high.toFixed(2)} (+${arGain.toFixed(1)}%) po ${st.ar.barsSinceSc} sesjach — definiuje TR top. `;
+    }
+    if (st.st) {
+      p += `Secondary Test ${formatPlDate(st.st.date)}: ${st.st.higherLowThanSc ? 'higher-low' : 'nizsze low'} `;
+      p += `na vol ${st.st.volRatio.toFixed(2)}x (${st.st.lowerVolThanSc ? 'mniej niz SC = OK' : 'wiecej niz SC = SLAB'}).`;
+    }
+    n.phaseA = p;
+  } else {
+    n.phaseA = "Phase A: Brak wyraznego Selling Climax w historii. Nietypowa akumulacja lub SC poza window 200 sesji.";
+  }
+
+  // Phase B — Building cause (consolidation)
+  let pb = "Phase B (Building cause / Konsolidacja)";
+  if (st.sc && s.springDate) {
+    const monthsB = Math.round(daysBetween(st.sc.date, s.springDate) / 30);
+    pb += ` ${formatPlDate(st.sc.date)} - ${formatPlDate(s.springDate)} (~${monthsB} miesiecy)`;
+  }
+  pb += `: Cena oscyluje miedzy $${s.trSupport.toFixed(2)} a $${s.trResistance.toFixed(2)} `;
+  pb += `(szerokosc ${s.trHeightPct.toFixed(1)}%). `;
+  pb += `Wielokrotne testy wsparcia z malejacym wolumenem — typowa absorbcja smart money `;
+  pb += `(podaz absorbowana przez kupujacych, dystrybucja kontrolowana).`;
+  n.phaseB = pb;
+
+  // Phase C — Spring / Test
+  let pc = `Phase C (Spring) ${formatPlDate(s.springDate)}: `;
+  pc += `Cena spada -${s.penetrationPct.toFixed(2)}% pod TR support, low $${s.springLow.toFixed(2)}, `;
+  pc += `na vol ${s.springVolumeRatio.toFixed(2)}x sredniej 30-dniowej. `;
+  if (s.springVolumeRatio >= 1.8) pc += `Silna absorbcja — smart money kupuje na panice retail. `;
+  else if (s.springVolumeRatio >= 1.2) pc += `Umiarkowana absorbcja — kupujacy obecni, ale nie agresywni. `;
+  else pc += `Slaba absorbcja — sprzedaz wyczerpana, ale buyers ostrozni. `;
+  pc += `Recovery do close $${s.springClose.toFixed(2)} (${s.springClose > s.trSupport ? 'powyzej' : 'ponizej'} support level). `;
+  pc += `Follow-through: ${s.followThrough === true ? 'POTWIERDZONE (kolejna sesja zamkneła wyzej)' : s.followThrough === false ? 'BRAK (sygnał slabszy)' : 'PENDING (Spring dzisiaj)'}.`;
+  n.phaseC = pc;
+
+  // Phase D — Markup begin (LPS, SOS)
+  let pd = "Phase D (Markup begin): ";
+  let pdParts = [];
+  if (st.lps) {
+    let lpsTxt = `LPS ${formatPlDate(st.lps.date)} — low $${st.lps.low.toFixed(2)} `;
+    lpsTxt += `(${st.lps.higherThanSpring ? 'higher-low niz Spring = potwierdzenie' : 'nizsze niz Spring = uwaga'}) `;
+    lpsTxt += `na vol ${st.lps.volRatio.toFixed(2)}x (${st.lps.lowVol ? 'low vol = brak nowej podazy = bullish' : 'vol wysoki = uwaga na resupply'})`;
+    pdParts.push(lpsTxt);
+  }
+  if (st.sos) {
+    pdParts.push(`Sign of Strength ${formatPlDate(st.sos.date)}: cena +${st.sos.aboveResistancePct.toFixed(1)}% nad TR resistance, markup phase potwierdzony`);
+  }
+  if (pdParts.length) pd += pdParts.join(". ") + ".";
+  else pd += `Phase D jeszcze nie rozpoczeta — czekamy na SOS (wybicie i close ponad TR $${s.trResistance.toFixed(2)}) jako finalne potwierdzenie kontynuacji. Entry $${s.entry.toFixed(2)} ${s.entry > s.trResistance ? 'JUZ ponad TR (post-breakout entry)' : 'ponizej TR top (pre-breakout entry)'}.`;
+  n.phaseD = pd;
+
+  // Phase E — Markup continuation
+  const tp1Move = ((s.tp1 - s.entry) / s.entry * 100);
+  const tp2Move = ((s.tp2 - s.entry) / s.entry * 100);
+  const slMove = ((s.sl - s.entry) / s.entry * 100);
+  n.phaseE = `Phase E (Markup continuation / cel): `
+    + `TP1 $${s.tp1.toFixed(2)} (+${tp1Move.toFixed(1)}%) = TR resistance retest. `
+    + `TP2 $${s.tp2.toFixed(2)} (+${tp2Move.toFixed(1)}%) = measured move (1x szerokosc TR). `
+    + `SL $${s.sl.toFixed(2)} (${slMove.toFixed(2)}%). R:R do TP2 = ${s.rr2.toFixed(2)}:1. `
+    + `Pozycja ${s.shares} akcji za $${s.positionValueUsd.toLocaleString()}, ryzyko $${s.capitalAtRiskUsd.toLocaleString()} (${s.riskPctOfNav.toFixed(3)}% NAV).`;
+
+  return n;
+}
 
 function generatePdf(signal) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -1822,19 +2288,190 @@ function generatePdf(signal) {
   doc.addPage();
   drawTheoreticalChart(doc, signal);
 
+  // === PAGE 4: detected Wyckoff phase elements + quality table ===
+  if (signal.structure) {
+    doc.addPage();
+    drawStructureAnalysis(doc, signal);
+  }
+
   doc.save(`wyckoff_${signal.ticker}_${signal.scanDate}.pdf`);
 }
 
-function drawPdfHeader(doc, s) {
-  doc.setFontSize(18);
+function drawStructureAnalysis(doc, s) {
+  const st = s.structure;
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 60, 100);
-  doc.text(`Wyckoff Spring Analysis: ${s.ticker}`, 10, 18);
+  doc.text(`${s.ticker} — analiza struktury Wyckoff (faza A→D)`, 10, 15);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80);
-  doc.text(`Scan: ${s.scanDate}  |  Score: ${s.setupScore}/100  |  R:R TP2: ${s.rr2.toFixed(2)}:1`, 10, 24);
+  doc.text(`Wykryte ${st.foundCount} z 7 elementow.  Ogolna jakosc struktury: ${st.overallQuality}/100.`, 10, 21);
+
+  // Overall quality summary box
+  const sumY = 26;
+  const sumBg = st.overallQuality >= 70 ? [232, 246, 232] : st.overallQuality >= 50 ? [253, 247, 218] : [250, 232, 232];
+  doc.setFillColor(sumBg[0], sumBg[1], sumBg[2]);
+  doc.rect(10, sumY, 190, 14, 'F');
+  doc.setDrawColor(180);
+  doc.setLineWidth(0.2);
+  doc.rect(10, sumY, 190, 14);
+  const sumC = st.overallQuality >= 70 ? [0, 110, 0] : st.overallQuality >= 50 ? [180, 130, 0] : [180, 30, 30];
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(sumC[0], sumC[1], sumC[2]);
+  doc.text(`Jakosc struktury: ${st.overallQuality}/100`, 14, sumY + 7);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80);
+  const rec = st.overallQuality >= 80 ? "Wzorcowa struktura akumulacji — wszystkie kluczowe elementy obecne."
+            : st.overallQuality >= 60 ? "Solidna struktura, niektore elementy nie idealne."
+            : st.overallQuality >= 40 ? "Czesciowa struktura — kilka elementow brakuje lub slabej jakosci."
+            :                          "Slaba struktura — wielu elementow brak. Spring moze byc przedwczesny.";
+  doc.text(rec, 100, sumY + 7);
+
+  // Element-by-element table
+  let y = sumY + 22;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 60, 100);
+  doc.text('Element-po-elemencie:', 10, y);
+
+  y += 6;
+  const rowH = 16;
+  st.elements.forEach((el, i) => {
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(10, y - 5, 190, rowH, 'F');
+    }
+
+    // Status circle
+    if (el.found) {
+      doc.setFillColor(0, 150, 0);
+      doc.circle(15, y - 1, 2.5, 'F');
+      doc.setTextColor(255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.text('OK', 12.5, y + 0.5);
+    } else {
+      doc.setFillColor(150, 150, 150);
+      doc.circle(15, y - 1, 2.5, 'F');
+      doc.setTextColor(255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.text('--', 12.5, y + 0.5);
+    }
+
+    // Code + name
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20);
+    doc.text(`${el.code} — ${el.name}`, 22, y);
+
+    // Quality bar (right side)
+    const qBarX = 130, qBarW = 50, qBarH = 4;
+    doc.setFillColor(230);
+    doc.rect(qBarX, y - 3, qBarW, qBarH, 'F');
+    const qPct = el.quality / 100;
+    const qColor = el.quality >= 70 ? [0, 150, 0] : el.quality >= 40 ? [220, 180, 0] : [200, 30, 30];
+    doc.setFillColor(qColor[0], qColor[1], qColor[2]);
+    doc.rect(qBarX, y - 3, qBarW * qPct, qBarH, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40);
+    doc.text(`${Math.round(el.quality)}/100`, qBarX + qBarW + 3, y + 0.5);
+
+    // Detail line
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(90);
+    doc.text(el.detail, 22, y + 5);
+
+    // Weight tag
+    doc.setFontSize(6);
+    doc.setTextColor(140);
+    doc.text(`waga ${el.weight}%`, 22, y + 9);
+
+    y += rowH;
+  });
+
+  // Narracja faz Wyckoffa
+  y += 4;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 60, 100);
+  doc.text('Narracja faz Wyckoffa:', 10, y);
+
+  y += 6;
+  const narr = generateWyckoffNarrative(s);
+  const phases = [
+    { name: 'Kontekst',   color: [60, 60, 60],    body: narr.kontekst },
+    { name: 'Phase A',    color: [40, 70, 160],   body: narr.phaseA },
+    { name: 'Phase B',    color: [160, 130, 0],   body: narr.phaseB },
+    { name: 'Phase C',    color: [200, 100, 0],   body: narr.phaseC },
+    { name: 'Phase D',    color: [0, 130, 0],     body: narr.phaseD },
+    { name: 'Phase E',    color: [80, 0, 130],    body: narr.phaseE },
+  ];
+
+  doc.setFontSize(8);
+  // Simple word-wrap helper using jsPDF splitTextToSize
+  phases.forEach(p => {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(p.color[0], p.color[1], p.color[2]);
+    doc.text(p.name + ':', 12, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(40);
+    const lines = doc.splitTextToSize(p.body, 175);
+    doc.text(lines, 30, y);
+    y += Math.max(4, lines.length * 3.5) + 1.5;
+  });
+
+  // Final takeaway box
+  y += 2;
+  const conv = computeConviction(s);
+  const takeBg = conv.tier === 'T1' ? [232, 246, 232]
+              : conv.tier === 'T2' ? [253, 247, 218]
+              :                       [250, 232, 232];
+  doc.setFillColor(takeBg[0], takeBg[1], takeBg[2]);
+  doc.rect(10, y - 4, 190, 12, 'F');
+  doc.setDrawColor(180);
+  doc.setLineWidth(0.2);
+  doc.rect(10, y - 4, 190, 12);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  const tc = conv.tier === 'T1' ? [0, 110, 0]
+          : conv.tier === 'T2' ? [180, 130, 0]
+          :                       [180, 30, 30];
+  doc.setTextColor(tc[0], tc[1], tc[2]);
+  const takeaway = conv.tier === 'T1' ? `WNIOSEK [${conv.tier} ${conv.stars}]: Setup wysokiej jakosci. Standardowa pozycja $${s.positionValueUsd.toLocaleString()}.`
+              : conv.tier === 'T2' ? `WNIOSEK [${conv.tier} ${conv.stars}]: Setup srednij jakosci. Rozwaz polowiczna pozycje lub poczekaj na SOS.`
+              : conv.tier === 'T3' ? `WNIOSEK [${conv.tier} ${conv.stars}]: Slaby setup. Mniejszy size lub pomin.`
+              :                       `WNIOSEK [${conv.tier}]: SKIP. Setup nie spelnia kryteriow.`;
+  doc.text(takeaway, 12, y + 3);
+}
+
+function drawPdfHeader(doc, s) {
+  const conv = computeConviction(s);
+  const wyckPct = s.structure ? s.structure.overallQuality : s.setupScore;
+  const klarStr = `${conv.klarmanScore}/${conv.klarmanMax}`;
+
+  // Big ticker line, then conviction badges (Wyck X% · Klar X/20 · TN star)
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 60, 100);
+  doc.text(`${s.ticker}`, 10, 18);
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(80);
+  const headerLine = `Wyck ${wyckPct}%  ·  Klar ${klarStr}  ·  ${conv.tier} ${conv.stars}  ·  ${conv.conviction}`;
+  doc.text(headerLine, 32, 18);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80);
+  doc.text(`Scan: ${s.scanDate}  ·  Setup score: ${s.setupScore}/100  ·  Total conviction: ${conv.totalScore}/100`, 10, 24);
   doc.text(`Generated: ${new Date().toLocaleString('en-US')}`, 10, 28);
 
   // Trade summary box
@@ -1870,83 +2507,89 @@ function drawPdfHeader(doc, s) {
 
 function drawKlarmanCompliance(doc, s) {
   const startY = 65;
+  const sc = computeKlarmanScorecard(s);
 
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 60, 100);
-  doc.text('Klarman 10 Rules — Compliance', 10, startY);
+  doc.text('Klarman Scorecard — 10 zasad x (0-2 pkt) = max 20', 10, startY);
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(120);
-  doc.text('Zasady value-investing Setha Klarmana zaaplikowane do tego setupu.', 10, startY + 5);
+  doc.text('Karta oceny Setha Klarmana. 0 = nie spelnia, 1 = czesciowo / dane niejednoznaczne, 2 = w pelni spelnia.', 10, startY + 5);
 
-  let y = startY + 12;
-  const rowH = 11;
+  let y = startY + 11;
+  const rowH = 14.5;
 
-  KLARMAN_RULES.forEach((rule, i) => {
-    const passed = rule.test(s);
-
+  sc.rules.forEach((rule, i) => {
     if (i % 2 === 0) {
       doc.setFillColor(248, 250, 252);
-      doc.rect(10, y - 5, 190, rowH, 'F');
+      doc.rect(10, y - 4, 190, rowH, 'F');
     }
+    // Score badge
+    const sVal = rule.score;
+    const badge = sVal === 2 ? [0, 150, 0]
+                : sVal === 1 ? [220, 170, 0]
+                : sVal === 0 ? [200, 30, 30]
+                :              [160, 160, 160];
+    doc.setFillColor(...badge);
+    doc.circle(15, y, 2.6, 'F');
+    doc.setTextColor(255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(sVal === null ? '-' : String(sVal), sVal === null ? 14 : 13.6, y + 1.1);
 
-    // OK / FAIL badge
-    if (passed) {
-      doc.setFillColor(0, 150, 0);
-      doc.circle(15, y - 1, 2.2, 'F');
-      doc.setTextColor(255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.text('OK', 12.5, y + 0.5);
-    } else {
-      doc.setFillColor(200, 30, 30);
-      doc.circle(15, y - 1, 2.2, 'F');
-      doc.setTextColor(255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.text('X', 14, y + 0.5);
-    }
-
+    // Rule number + name
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20);
-    doc.text(`${i + 1}. ${rule.name}`, 22, y - 1);
+    doc.text(`${rule.n}. ${rule.name}`, 22, y - 1);
 
+    // Question
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(110);
+    const qLines = doc.splitTextToSize(rule.q, 140);
+    doc.text(qLines[0] || '', 22, y + 2.5);
+
+    // Note (auto-evaluated)
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(50);
+    const nLines = doc.splitTextToSize(rule.note || '', 165);
+    doc.text(nLines[0] || '', 22, y + 6);
+
+    // Score label on the right
     doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text(rule.detail(s), 22, y + 3.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...badge);
+    doc.text(sVal === null ? '— / 2' : `${sVal} / 2`, 195, y, { align: 'right' });
 
     y += rowH;
   });
 
-  // Summary
-  const passed = KLARMAN_RULES.filter(r => r.test(s)).length;
-  const pct = (passed / KLARMAN_RULES.length) * 100;
-
-  y += 4;
-  const summBg = passed >= 8 ? [232, 246, 232] : passed >= 6 ? [253, 247, 218] : [250, 232, 232];
-  doc.setFillColor(...summBg);
-  doc.rect(10, y - 5, 190, 13, 'F');
+  // Summary box
+  y += 2;
+  doc.setFillColor(...sc.interpretation.bg);
+  doc.rect(10, y - 5, 190, 14, 'F');
   doc.setDrawColor(180);
   doc.setLineWidth(0.2);
-  doc.rect(10, y - 5, 190, 13);
+  doc.rect(10, y - 5, 190, 14);
 
-  doc.setFontSize(12);
+  doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  const summColor = passed >= 8 ? [0, 110, 0] : passed >= 6 ? [180, 130, 0] : [180, 30, 30];
-  doc.setTextColor(...summColor);
-  doc.text(`Compliance: ${passed} / ${KLARMAN_RULES.length}  (${pct.toFixed(0)}%)`, 14, y + 2);
+  doc.setTextColor(...sc.interpretation.color);
+  doc.text(`SUMA: ${sc.total} / ${sc.maxPossible} pkt`, 14, y + 2);
 
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80);
-  const rec = passed >= 9 ? "PASS — setup spelnia pelne kryteria Klarmana."
-            : passed >= 7 ? "WARUNKOWO — mniejszy size, zwiekszona ostroznosc."
-            :               "SKIP — setup nie spelnia minimum kryteriow.";
-  doc.text(rec, 100, y + 2.5);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(sc.interpretation.label, 90, y + 2);
+
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(90);
+  doc.text('16-20 pkt: Wyjatkowa okazja  ·  11-15 pkt: Warta glebszej analizy  ·  0-10 pkt: Odrzuc (wysokie ryzyko)', 14, y + 6.5);
 }
 
 function drawActualChart(doc, s) {
@@ -1984,6 +2627,46 @@ function drawActualChart(doc, s) {
   const xS = i => cL + (i / Math.max(1, last.length - 1)) * cW;
   const yS = p => cT + cH - ((p - pMin) / pRange) * cH;
 
+  // ----- Phase background zones (colored bands) -----
+  // Translate global indices to last-array indices.
+  const fullLenLocal = bars.length;
+  const lastOffsetLocal = fullLenLocal - last.length;
+  function localIdx(g) { return Math.max(0, Math.min(last.length - 1, g - lastOffsetLocal)); }
+
+  if (s.structure) {
+    const st = s.structure;
+    const springIdxL = last.findIndex(b => b.date === s.springDate);
+    // Phase A: PS/SC to ST
+    let aStart = 0, aEnd = 0;
+    if (st.sc) aStart = localIdx(st.sc.idx);
+    if (st.ps) aStart = localIdx(st.ps.idx);
+    aEnd = aStart;
+    if (st.ar) aEnd = Math.max(aEnd, localIdx(st.ar.idx));
+    if (st.st) aEnd = Math.max(aEnd, localIdx(st.st.idx));
+    // Phase B: ST to Spring
+    const bStart = aEnd;
+    const bEnd = springIdxL > 0 ? springIdxL - 1 : last.length - 1;
+    // Phase C: around Spring
+    const cStart = springIdxL > 0 ? springIdxL : last.length - 1;
+    let cEnd = cStart;
+    if (st.lps) cEnd = Math.max(cEnd, localIdx(st.lps.idx));
+    cEnd = Math.min(cEnd + 1, last.length - 1);
+    // Phase D: after LPS to SOS or end
+    const dStart = cEnd;
+    const dEnd = st.sos ? localIdx(st.sos.idx) : last.length - 1;
+
+    function shade(startI, endI, color) {
+      if (endI <= startI) return;
+      const x1 = xS(startI), x2 = xS(endI);
+      doc.setFillColor(color[0], color[1], color[2]);
+      doc.rect(x1, cT, x2 - x1, cH, 'F');
+    }
+    shade(aStart, aEnd, [225, 235, 248]);   // Phase A — light blue
+    shade(bStart, bEnd, [253, 248, 220]);   // Phase B — light yellow
+    shade(cStart, cEnd, [253, 220, 200]);   // Phase C — light orange
+    shade(dStart, dEnd, [225, 245, 225]);   // Phase D — light green
+  }
+
   // Grid
   doc.setDrawColor(232);
   doc.setLineWidth(0.1);
@@ -1994,6 +2677,32 @@ function drawActualChart(doc, s) {
     doc.setFontSize(6);
     doc.setTextColor(150);
     doc.text(`$${p.toFixed(2)}`, cL + cW + 1, y + 1);
+  }
+
+  // Phase labels along bottom of chart
+  if (s.structure) {
+    const st = s.structure;
+    const springIdxLb = last.findIndex(b => b.date === s.springDate);
+    function labelPhase(startI, endI, lbl, color) {
+      if (endI <= startI) return;
+      const x = (xS(startI) + xS(endI)) / 2 - 6;
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.text(lbl, x, cT + cH - 1);
+    }
+    let aS = 0, aE = 0;
+    if (st.sc) aS = localIdx(st.sc.idx);
+    if (st.ps) aS = localIdx(st.ps.idx);
+    aE = aS;
+    if (st.ar) aE = Math.max(aE, localIdx(st.ar.idx));
+    if (st.st) aE = Math.max(aE, localIdx(st.st.idx));
+    labelPhase(aS, aE, 'Phase A', [70, 100, 160]);
+    const bE = springIdxLb > 0 ? springIdxLb - 1 : last.length - 1;
+    labelPhase(aE, bE, 'Phase B', [160, 130, 0]);
+    if (springIdxLb >= 0) labelPhase(springIdxLb - 1, springIdxLb + 2, 'Phase C', [200, 100, 0]);
+    const dStartL = st.lps ? localIdx(st.lps.idx) + 1 : (springIdxLb >= 0 ? springIdxLb + 3 : last.length - 1);
+    labelPhase(dStartL, last.length - 1, 'Phase D', [0, 130, 0]);
   }
 
   // TR support/resistance (green dashed)
@@ -2051,7 +2760,35 @@ function drawActualChart(doc, s) {
     doc.rect(x - cw / 2, yTop, cw, Math.max(0.3, yBot - yTop), 'F');
   });
 
-  // Mark Spring bar prominently
+  // Mark all detected Wyckoff structure elements on the chart.
+  // `last` is bars.slice(-200) so we need to translate global bar indices
+  // (from structure detection) into last-array indices.
+  const fullLen = bars.length;
+  const lastOffset = fullLen - last.length;
+  function markStructure(globalIdx, price, label, color) {
+    const localIdx = globalIdx - lastOffset;
+    if (localIdx < 0 || localIdx >= last.length) return;
+    const x = xS(localIdx);
+    const y = yS(price);
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.setDrawColor(Math.max(0, color[0] - 50), Math.max(0, color[1] - 50), Math.max(0, color[2] - 50));
+    doc.setLineWidth(0.35);
+    doc.circle(x, y, 1.9, 'FD');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(color[0], color[1], color[2]);
+    doc.text(label, x - 4, y - 2.5);
+  }
+  if (s.structure) {
+    const st = s.structure;
+    if (st.ps)  markStructure(st.ps.idx,  st.ps.low,    'PS',     [120, 120, 120]);
+    if (st.sc)  markStructure(st.sc.idx,  st.sc.low,    'SC',     [180, 0, 0]);
+    if (st.ar)  markStructure(st.ar.idx,  st.ar.high,   'AR',     [120, 120, 120]);
+    if (st.st)  markStructure(st.st.idx,  st.st.low,    'ST',     [120, 120, 120]);
+    if (st.lps) markStructure(st.lps.idx, st.lps.low,   'LPS',    [120, 120, 120]);
+    if (st.sos) markStructure(st.sos.idx, st.sos.close, 'SOS',    [0, 140, 0]);
+  }
+  // Spring marker (always last, biggest, on top)
   const springIdx = last.findIndex(b => b.date === s.springDate);
   if (springIdx >= 0) {
     const sx = xS(springIdx);
@@ -2059,7 +2796,7 @@ function drawActualChart(doc, s) {
     doc.setFillColor(255, 165, 0);
     doc.setDrawColor(200, 90, 0);
     doc.setLineWidth(0.4);
-    doc.circle(sx, sy, 2.2, 'FD');
+    doc.circle(sx, sy, 2.4, 'FD');
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(200, 90, 0);
@@ -2391,4 +3128,3 @@ if (new URLSearchParams(location.search).get("autoscan") === "1") {
 
 </body>
 </html>
-
