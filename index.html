@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <title>Wyckoff Spring Scanner</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -20,8 +21,6 @@ header.top {
 header.top h1 { margin: 0; color: #88c0d0; font-size: 22px; }
 header.top p { margin: 4px 0 0 0; font-size: 13px; color: #a8b5c8; }
 main { max-width: 1200px; margin: 0 auto; padding: 24px; }
-
-/* Config panel */
 .panel {
   background: #1a232e; border-radius: 10px; padding: 22px;
   margin-bottom: 20px; border-left: 4px solid #5e81ac;
@@ -48,7 +47,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
   outline: none; border-color: #88c0d0;
 }
 .field textarea { resize: vertical; min-height: 60px; font-family: monospace; font-size: 12px; }
-
 .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .row.center { justify-content: center; margin-top: 8px; }
 .btn {
@@ -62,8 +60,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
 .btn.primary:hover { background: #b5cf9f; }
 .btn.danger { background: #bf616a; }
 .btn.ghost { background: transparent; border: 1px solid #4c566a; color: #d8dee9; }
-
-/* Progress */
 .progress-bar {
   background: #131a22; border-radius: 6px; height: 24px;
   position: relative; overflow: hidden; margin: 10px 0;
@@ -85,8 +81,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
 .log-entry { padding: 2px 0; }
 .log-entry.err { color: #bf616a; }
 .log-entry.ok  { color: #a3be8c; }
-
-/* Signals */
 .signals-header {
   display: flex; justify-content: space-between; align-items: baseline;
   margin: 24px 0 12px 0;
@@ -154,7 +148,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
 .news-date { color: #6b7a8c; font-size: 11px; margin-right: 6px; }
 .news-src  { color: #6b7a8c; font-size: 11px; }
 .muted { color: #6b7a8c; font-style: italic; }
-
 .hidden { display: none !important; }
 .callout {
   background: #2e2419; border-left: 3px solid #ebcb8b;
@@ -162,8 +155,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
   color: #ebcb8b; margin: 10px 0;
 }
 .callout.warn { background: #2e1919; border-left-color: #bf616a; color: #d8a4a8; }
-
-/* Tabs */
 .tabs {
   display: flex; gap: 4px; border-bottom: 1px solid #2e3a4a;
   margin-bottom: 24px;
@@ -182,11 +173,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
   border-radius: 10px; font-size: 11px; font-weight: 600;
 }
 .tab.active .tab-count { background: #88c0d0; color: #0f1419; }
-
-/* Journal stats cards */
-.stats-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
-}
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .stat-card {
   background: #1a232e; border-radius: 10px; padding: 18px 22px;
   border-left: 4px solid #88c0d0;
@@ -204,8 +191,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
   font-size: 13px; color: #d8dee9; border-top: 1px solid #2e3a4a;
 }
 .stat-row b { color: #eceff4; }
-
-/* Score buckets */
 .bucket-row {
   display: flex; align-items: center; gap: 14px; padding: 6px 0;
   font-size: 13px;
@@ -219,8 +204,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
 .bucket-fill.mid { background: #ebcb8b; }
 .bucket-fill.low { background: #bf616a; }
 .bucket-num { color: #a8b5c8; font-size: 12px; min-width: 130px; text-align: right; }
-
-/* Journal table */
 .table-wrap { overflow-x: auto; }
 .journal-table {
   width: 100%; border-collapse: collapse;
@@ -242,11 +225,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
 .outcome-stopped { color: #bf616a; font-weight: 500; }
 .outcome-open { color: #ebcb8b; }
 .outcome-pending { color: #6b7a8c; font-style: italic; }
-
-.tool-row {
-  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-  margin-bottom: 14px;
-}
+.tool-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
 .tool-row select, .tool-row input[type="search"] {
   background: #131a22; border: 1px solid #2e3a4a; color: #eceff4;
   padding: 7px 10px; border-radius: 4px; font-family: inherit; font-size: 13px;
@@ -258,12 +237,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
   display: inline-block;
 }
 .btn-file:hover { background: #2c3441; }
-
 footer.bottom {
   text-align: center; color: #6b7a8c; font-size: 12px;
   padding: 20px; border-top: 1px solid #2e3a4a; margin-top: 40px;
 }
-
 @media (max-width: 800px) {
   .config-grid { grid-template-columns: 1fr 1fr; }
   .cell-grid { grid-template-columns: 1fr 1fr; }
@@ -271,47 +248,26 @@ footer.bottom {
 </style>
 </head>
 <body>
-
 <header class="top">
   <h1>Wyckoff Spring Scanner</h1>
-  <p>Detektor fazy C akumulacji Wyckoffa — Dow Jones, Nasdaq-100, S&amp;P 500. Działa w przeglądarce, bez instalacji.</p>
+  <p>Detektor fazy C akumulacji Wyckoffa — Dow Jones, Nasdaq-100, S&amp;P 500.</p>
 </header>
-
 <main>
-
 <nav class="tabs">
   <button class="tab active" data-tab="scanner">Skaner</button>
   <button class="tab" data-tab="journal">Dziennik <span class="tab-count" id="journal-count">0</span></button>
 </nav>
-
 <div id="tab-scanner">
-
-<!-- ============ CONFIG PANEL ============ -->
 <section class="panel" id="config-panel">
   <h2>Konfiguracja</h2>
-
   <div class="config-grid">
-    <div class="field">
-      <label>NAV portfela (USD)</label>
-      <input type="number" id="nav" value="550000" min="1000" step="1000">
-    </div>
-    <div class="field">
-      <label>Wielkość pozycji (USD)</label>
-      <input type="number" id="position-usd" value="10000" min="100" step="100">
-    </div>
-    <div class="field">
-      <label>Min R:R (TP2)</label>
-      <input type="number" id="minrr" value="3" min="1" step="0.5">
-    </div>
-    <div class="field">
-      <label>Min score (0-100)</label>
-      <input type="number" id="minscore" value="60" min="0" max="100" step="5">
-    </div>
+    <div class="field"><label>NAV portfela (USD)</label><input type="number" id="nav" value="550000" min="1000" step="1000"></div>
+    <div class="field"><label>Wielkość pozycji (USD)</label><input type="number" id="position-usd" value="10000" min="100" step="100"></div>
+    <div class="field"><label>Min R:R (TP2)</label><input type="number" id="minrr" value="3" min="1" step="0.5"></div>
+    <div class="field"><label>Min score (0-100)</label><input type="number" id="minscore" value="60" min="0" max="100" step="5"></div>
   </div>
-
   <div class="config-grid">
-    <div class="field">
-      <label>Uniwersum</label>
+    <div class="field"><label>Uniwersum</label>
       <select id="universe">
         <option value="DJ30">Dow Jones 30 (~10 sek)</option>
         <option value="NDX">Nasdaq-100 (~30 sek)</option>
@@ -321,39 +277,29 @@ footer.bottom {
         <option value="CUSTOM">Własna lista tickerów…</option>
       </select>
     </div>
-    <div class="field">
-      <label>Źródło danych</label>
+    <div class="field"><label>Źródło danych</label>
       <select id="source">
         <option value="stooq" selected>Stooq (darmowe, via CORS-proxy)</option>
         <option value="twelvedata">Twelve Data (zalecane, darmowy klucz API)</option>
         <option value="csv">Upload plików CSV (offline)</option>
       </select>
     </div>
-    <div class="field">
-      <label>Klucz Twelve Data (opcjonalnie)</label>
-      <input type="password" id="tdkey" placeholder="puste = nie używa Twelve Data">
-    </div>
-    <div class="field">
-      <label>Klucz Finnhub — news (opcjonalnie)</label>
-      <input type="password" id="finkey" placeholder="puste = bez warstwy news">
-    </div>
+    <div class="field"><label>Klucz Twelve Data (opcjonalnie)</label><input type="password" id="tdkey" placeholder="puste = nie używa Twelve Data"></div>
+    <div class="field"><label>Klucz Finnhub — news (opcjonalnie)</label><input type="password" id="finkey" placeholder="puste = bez warstwy news"></div>
   </div>
-
   <div id="custom-tickers-row" class="config-grid hidden">
     <div class="field" style="grid-column: 1 / -1;">
       <label>Lista tickerów (oddziel przecinkami lub spacjami)</label>
       <textarea id="custom-tickers" placeholder="AAPL, MSFT, NVDA, TSLA, AMD, ..."></textarea>
     </div>
   </div>
-
   <div id="csv-upload-row" class="config-grid hidden">
     <div class="field" style="grid-column: 1 / -1;">
       <label>Pliki CSV (Date, Open, High, Low, Close, Volume)</label>
       <input type="file" id="csv-files" multiple accept=".csv,.txt">
-      <div class="sub">Nazwa pliku = ticker (np. <code>AAPL.csv</code>). Pobierz CSV ze Stooq, Yahoo Finance, lub innego źródła.</div>
+      <div class="sub">Nazwa pliku = ticker (np. <code>AAPL.csv</code>).</div>
     </div>
   </div>
-
   <div class="row center">
     <button class="btn primary" id="scan-btn">Skanuj</button>
     <button class="btn danger hidden" id="stop-btn">Stop</button>
@@ -374,17 +320,11 @@ footer.bottom {
       min
     </label>
   </div>
-
   <div id="config-msg"></div>
 </section>
-
-<!-- ============ PROGRESS ============ -->
 <section class="panel hidden" id="progress-panel">
   <h2>Postęp skanowania</h2>
-  <div class="progress-bar">
-    <div class="progress-fill" id="progress-fill"></div>
-    <div class="progress-text" id="progress-text">0 / 0</div>
-  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div><div class="progress-text" id="progress-text">0 / 0</div></div>
   <div class="row">
     <span style="font-size: 13px; color: #a8b5c8;">Znaleziono sygnałów:</span>
     <b id="found-count" style="color: #a3be8c;">0</b>
@@ -393,98 +333,49 @@ footer.bottom {
   </div>
   <div class="log" id="log"></div>
 </section>
-
-<!-- ============ SIGNALS ============ -->
 <section id="signals-section" class="hidden">
-  <div class="signals-header">
-    <h2 id="signals-title">Sygnały Wyckoff Spring</h2>
-    <div class="sub" id="scan-summary"></div>
-  </div>
+  <div class="signals-header"><h2 id="signals-title">Sygnały Wyckoff Spring</h2><div class="sub" id="scan-summary"></div></div>
   <div id="signals"></div>
 </section>
-
-</div><!-- /tab-scanner -->
-
-<!-- ============ JOURNAL TAB ============ -->
+</div>
 <div id="tab-journal" class="hidden">
-
   <section class="panel">
     <h2>Statystyki skuteczności (5d / 2tyg / 1mc)</h2>
     <div class="tool-row">
       <button class="btn primary" id="evaluate-btn">Aktualizuj wyniki</button>
       <button class="btn ghost" id="journal-export">Eksport JSON</button>
-      <label class="btn-file">
-        Import JSON
-        <input type="file" id="journal-import" accept=".json,application/json" hidden>
-      </label>
+      <label class="btn-file">Import JSON<input type="file" id="journal-import" accept=".json,application/json" hidden></label>
       <button class="btn danger" id="journal-clear">Wyczyść dziennik</button>
       <span id="journal-status" style="font-size: 13px; color: #a8b5c8; margin-left: auto;"></span>
     </div>
     <div class="stats-grid" id="stats-overview"></div>
   </section>
-
   <section class="panel">
-    <h2>Skuteczność według setup score (walidacja "80%")</h2>
-    <p style="font-size: 12px; color: #a8b5c8; margin: 0 0 12px;">
-      Czy wyższy score = wyższa skuteczność? Sprawdź empirycznie. Im więcej wpisów, tym wiarygodniejszy wynik. Dla solidnego oszacowania zbierz min. 30 wpisów na bucket.
-    </p>
+    <h2>Skuteczność według setup score</h2>
+    <p style="font-size: 12px; color: #a8b5c8; margin: 0 0 12px;">Czy wyższy score = wyższa skuteczność? Min. 30 wpisów na bucket dla solidnej próbki.</p>
     <div id="score-buckets"></div>
   </section>
-
   <section class="panel">
     <h2>Wszystkie wpisy w dzienniku</h2>
     <div class="tool-row">
       <input type="search" id="journal-search" placeholder="Filtruj po tickerze…" style="min-width: 180px;">
-      <select id="journal-horizon">
-        <option value="d5">Wyniki: 5 dni handlowych</option>
-        <option value="d10" selected>Wyniki: 2 tygodnie (10d)</option>
-        <option value="d21">Wyniki: 1 miesiąc (21d)</option>
-      </select>
-      <select id="journal-filter">
-        <option value="all">Wszystkie</option>
-        <option value="wins">Tylko TP1/TP2 hit</option>
-        <option value="losses">Tylko stop loss</option>
-        <option value="open">Tylko otwarte / pending</option>
-      </select>
+      <select id="journal-horizon"><option value="d5">5 dni</option><option value="d10" selected>10 dni</option><option value="d21">21 dni</option></select>
+      <select id="journal-filter"><option value="all">Wszystkie</option><option value="wins">TP hit</option><option value="losses">Stop</option><option value="open">Otwarte</option></select>
       <span id="journal-table-status" style="font-size: 13px; color: #6b7a8c; margin-left: auto;"></span>
     </div>
-    <div class="table-wrap">
-      <table class="journal-table" id="journal-table"></table>
-    </div>
+    <div class="table-wrap"><table class="journal-table" id="journal-table"></table></div>
   </section>
-
-</div><!-- /tab-journal -->
-
+</div>
 </main>
-
-<footer class="bottom">
-  Wyckoff Spring Scanner · Dane: Stooq.com / Twelve Data · News: Finnhub<br>
-  <i>Nie jest to porada inwestycyjna. Score 0–100 jest heurystyczny, a nie historyczną win-rate.
-  Zwaliduj backtestem zanim podstawisz kapitał.</i>
-</footer>
-
+<footer class="bottom">Wyckoff Spring Scanner · <i>Nie jest to porada inwestycyjna.</i></footer>
 <script>
 "use strict";
-
-// ===========================================================================
-//  TICKER UNIVERSE
-// ===========================================================================
 const TICKERS = {
   DJ30: "AAPL AMGN AXP BA CAT CRM CSCO CVX DIS DOW GS HD HON IBM JNJ JPM KO MCD MMM MRK MSFT NKE NVDA PG SHW TRV UNH V VZ WMT".split(/\s+/),
-
   NDX: "AAPL ABNB ADBE ADI ADP ADSK AEP AMAT AMD AMGN AMZN ANSS APP ARM ASML AVGO AZN BIIB BKNG BKR CCEP CDNS CDW CEG CHTR CMCSA COST CPRT CRWD CSCO CSGP CSX CTAS CTSH DASH DDOG DLTR DXCM EA EXC FANG FAST FTNT GEHC GFS GILD GOOG GOOGL HON IDXX INTC INTU ISRG KDP KHC KLAC LIN LRCX LULU MAR MCHP MDB MDLZ MELI META MNST MRVL MSFT MU NFLX NVDA NXPI ODFL ON ORLY PANW PAYX PCAR PDD PEP PYPL QCOM REGN ROP ROST SBUX SMCI SNPS TEAM TMUS TSLA TTD TTWO TXN VRSK VRTX WBD WDAY XEL ZS".split(/\s+/),
-
-  SP500: ("A AAL AAPL ABBV ABNB ABT ACGL ACN ADBE ADI ADM ADP ADSK AEE AEP AES AFL AIG AIZ AJG AKAM ALB ALGN ALL ALLE AMAT AMCR AMD AME AMGN AMP AMT AMZN ANET ANSS AON AOS APA APD APH APO APTV ARE ATO AVB AVGO AVY AWK AXON AXP AZO BA BAC BALL BAX BBY BDX BEN BF-B BG BIIB BIO BK BKNG BKR BLDR BLK BMY BR BRK-B BRO BSX BWA BX BXP C CAG CAH CARR CAT CB CBOE CBRE CCI CCL CDNS CDW CE CEG CF CFG CHD CHRW CHTR CI CINF CL CLX CMCSA CME CMG CMI CMS CNC CNP COF COIN COO COP COR COST CPAY CPB CPRT CPT CRL CRM CRWD CSCO CSGP CSX CTAS CTLT CTRA CTSH CTVA CVS CVX CZR D DAL DAY DD DE DECK DELL DFS DG DGX DHI DHR DIS DLR DLTR DOC DOV DOW DPZ DRI DTE DUK DVA DVN DXCM EA EBAY ECL ED EFX EG EIX EL ELV EMN EMR ENPH EOG EPAM EQIX EQR EQT ERIE ES ESS ETN ETR EVRG EW EXC EXPD EXPE EXR F FANG FAST FCX FDS FDX FE FFIV FI FICO FIS FITB FMC FOX FOXA FRT FSLR FTNT FTV GD GDDY GE GEHC GEN GEV GILD GIS GL GLW GM GNRC GOOG GOOGL GPC GPN GRMN GS GWW HAL HAS HBAN HCA HD HES HIG HII HLT HOLX HON HPE HPQ HRL HSIC HST HSY HUBB HUM HWM IBM ICE IDXX IEX IFF INCY INTC INTU INVH IP IPG IQV IR IRM ISRG IT ITW IVZ J JBHT JBL JCI JKHY JNJ JNPR JPM K KDP KEY KEYS KHC KIM KKR KLAC KMB KMI KMX KO KR KVUE L LDOS LEN LH LHX LIN LKQ LLY LMT LNT LOW LRCX LULU LUV LVS LW LYB LYV MA MAA MAR MAS MCD MCHP MCK MCO MDLZ MDT MET META MGM MHK MKC MKTX MLM MMC MMM MNST MO MOH MOS MPC MPWR MRK MRNA MRO MS MSCI MSFT MSI MTB MTCH MTD MU NCLH NDAQ NDSN NEE NEM NFLX NI NKE NOC NOW NRG NSC NTAP NTRS NUE NVDA NVR NWS NWSA NXPI O ODFL OKE OMC ON ORCL ORLY OTIS OXY PANW PARA PAYC PAYX PCAR PCG PEG PEP PFE PFG PG PGR PH PHM PKG PLD PLTR PM PNC PNR PNW PODD POOL PPG PPL PRU PSA PSX PTC PWR PYPL QCOM QRVO RCL REG REGN RF RJF RL RMD ROK ROL ROP ROST RSG RTX RVTY SBAC SBUX SCHW SHW SJM SLB SMCI SNA SNPS SO SOLV SPG SPGI SRE STE STLD STT STX STZ SW SWK SWKS SYF SYK SYY T TAP TDG TDY TEL TER TFC TFX TGT TJX TKO TMO TMUS TPL TPR TRGP TRMB TROW TRV TSCO TSLA TSN TT TTWO TXN TXT TYL UAL UBER UDR UHS ULTA UNH UNP UPS URI USB V VICI VLO VLTO VMC VRSK VRSN VRTX VST VTR VTRS VZ WAB WAT WBA WBD WDC WEC WELL WFC WM WMB WMT WRB WST WTW WY WYNN XEL XOM XYL YUM ZBH ZBRA ZTS".split(/\s+/)),
+  SP500: ("A AAL AAPL ABBV ABNB ABT ACGL ACN ADBE ADI ADM ADP ADSK AEE AEP AES AFL AIG AIZ AJG AKAM ALB ALGN ALL ALLE AMAT AMCR AMD AME AMGN AMP AMT AMZN ANET ANSS AON AOS APA APD APH APO APTV ARE ATO AVB AVGO AVY AWK AXON AXP AZO BA BAC BALL BAX BBY BDX BEN BF-B BG BIIB BIO BK BKNG BKR BLDR BLK BMY BR BRK-B BRO BSX BWA BX BXP C CAG CAH CARR CAT CB CBOE CBRE CCI CCL CDNS CDW CE CEG CF CFG CHD CHRW CHTR CI CINF CL CLX CMCSA CME CMG CMI CMS CNC CNP COF COIN COO COP COR COST CPAY CPB CPRT CPT CRL CRM CRWD CSCO CSGP CSX CTAS CTLT CTRA CTSH CTVA CVS CVX CZR D DAL DAY DD DE DECK DELL DFS DG DGX DHI DHR DIS DLR DLTR DOC DOV DOW DPZ DRI DTE DUK DVA DVN DXCM EA EBAY ECL ED EFX EG EIX EL ELV EMN EMR ENPH EOG EPAM EQIX EQR EQT ERIE ES ESS ETN ETR EVRG EW EXC EXPD EXPE EXR F FANG FAST FCX FDS FDX FE FFIV FI FICO FIS FITB FMC FOX FOXA FRT FSLR FTNT FTV GD GDDY GE GEHC GEN GEV GILD GIS GL GLW GM GNRC GOOG GOOGL GPC GPN GRMN GS GWW HAL HAS HBAN HCA HD HES HIG HII HLT HOLX HON HPE HPQ HRL HSIC HST HSY HUBB HUM HWM IBM ICE IDXX IEX IFF INCY INTC INTU INVH IP IPG IQV IR IRM ISRG IT ITW IVZ J JBHT JBL JCI JKHY JNJ JNPR JPM K KDP KEY KEYS KHC KIM KKR KLAC KMB KMI KMX KO KR KVUE L LDOS LEN LH LHX LIN LKQ LLY LMT LNT LOW LRCX LULU LUV LVS LW LYB LYV MA MAA MAR MAS MCD MCHP MCK MCO MDLZ MDT MET META MGM MHK MKC MKTX MLM MMC MMM MNST MO MOH MOS MPC MPWR MRK MRNA MRO MS MSCI MSFT MSI MTB MTCH MTD MU NCLH NDAQ NDSN NEE NEM NFLX NI NKE NOC NOW NRG NSC NTAP NTRS NUE NVDA NVR NWS NWSA NXPI O ODFL OKE OMC ON ORCL ORLY OTIS OXY PANW PARA PAYC PAYX PCAR PCG PEG PEP PFE PFG PG PGR PH PHM PKG PLD PLTR PM PNC PNR PNW PODD POOL PPG PPL PRU PSA PSX PTC PWR PYPL QCOM QRVO RCL REG REGN RF RJF RL RMD ROK ROL ROP ROST RSG RTX RVTY SBAC SBUX SCHW SHW SJM SLB SMCI SNA SNPS SO SOLV SPG SPGI SRE STE STLD STT STX STZ SW SWK SWKS SYF SYK SYY T TAP TDG TDY TEL TER TFC TFX TGT TJX TKO TMO TMUS TPL TPR TRGP TRMB TROW TRV TSCO TSLA TSN TT TTWO TXN TXT TYL UAL UBER UDR UHS ULTA UNH UNP UPS URI USB V VICI VLO VLTO VMC VRSK VRSN VRTX VST VTR VTRS VZ WAB WAT WBA WBD WDC WEC WELL WFC WM WMB WMT WRB WST WTW WY WYNN XEL XOM XYL YUM ZBH ZBRA ZTS").split(/\s+/),
 };
-
-const COMBO_KEYS = {
-  DJ30: ["DJ30"],
-  NDX: ["NDX"],
-  COMBO: ["DJ30", "NDX"],
-  SP500: ["SP500"],
-  ALL: ["DJ30", "NDX", "SP500"],
-};
-
+const COMBO_KEYS = { DJ30:["DJ30"], NDX:["NDX"], COMBO:["DJ30","NDX"], SP500:["SP500"], ALL:["DJ30","NDX","SP500"] };
 function buildUniverse(key) {
   if (key === "CUSTOM") {
     const raw = document.getElementById("custom-tickers").value;
@@ -495,18 +386,7 @@ function buildUniverse(key) {
   for (const k of keys) for (const t of TICKERS[k]) set.add(t);
   return [...set].sort();
 }
-
-// ===========================================================================
-//  WYCKOFF MATH
-// ===========================================================================
-const W = {
-  MIN_BARS: 365, TR_WINDOW: 120, TR_EXCLUDE_RECENT: 3,
-  SPRING_SCAN_WINDOW: 5, SPRING_MUST_BE_WITHIN: 3,
-  ATR_PERIOD: 14, VOL_AVG_PERIOD: 30,
-  MIN_TR_WIDTH_PCT: 0.05, MAX_TR_TREND_PCT: 0.15,
-  MIN_PENETRATION_PCT: 0.002, MAX_PENETRATION_PCT: 0.08,
-};
-
+const W = { MIN_BARS:365, TR_WINDOW:120, TR_EXCLUDE_RECENT:3, SPRING_SCAN_WINDOW:5, SPRING_MUST_BE_WITHIN:3, ATR_PERIOD:14, VOL_AVG_PERIOD:30, MIN_TR_WIDTH_PCT:0.05, MAX_TR_TREND_PCT:0.15, MIN_PENETRATION_PCT:0.002, MAX_PENETRATION_PCT:0.08 };
 function quantile(arr, q) {
   const s = [...arr].sort((a, b) => a - b);
   const pos = (s.length - 1) * q;
@@ -514,25 +394,20 @@ function quantile(arr, q) {
   const rest = pos - base;
   return s[base + 1] !== undefined ? s[base] + rest * (s[base + 1] - s[base]) : s[base];
 }
-
 function linearSlope(ys) {
   const n = ys.length;
   let sx = 0, sy = 0, sxy = 0, sx2 = 0;
-  for (let i = 0; i < n; i++) {
-    sx += i; sy += ys[i]; sxy += i * ys[i]; sx2 += i * i;
-  }
+  for (let i = 0; i < n; i++) { sx += i; sy += ys[i]; sxy += i * ys[i]; sx2 += i * i; }
   return (n * sxy - sx * sy) / (n * sx2 - sx * sx);
 }
-
 function atrSeries(bars, period) {
   const trs = [];
   for (let i = 0; i < bars.length; i++) {
-    if (i === 0) {
-      trs.push(bars[i].high - bars[i].low);
-    } else {
+    if (i === 0) trs.push(bars[i].high - bars[i].low);
+    else {
       const hl = bars[i].high - bars[i].low;
       const hc = Math.abs(bars[i].high - bars[i - 1].close);
-      const lc = Math.abs(bars[i].low  - bars[i - 1].close);
+      const lc = Math.abs(bars[i].low - bars[i - 1].close);
       trs.push(Math.max(hl, hc, lc));
     }
   }
@@ -545,29 +420,24 @@ function atrSeries(bars, period) {
   }
   return out;
 }
-
 function identifyTradingRange(bars) {
   const end = bars.length - W.TR_EXCLUDE_RECENT;
   const start = end - W.TR_WINDOW;
   if (start < 0) return null;
   const win = bars.slice(start, end);
   if (win.length < 30) return null;
-
   const support = quantile(win.map(b => b.low), 0.05);
   const resistance = quantile(win.map(b => b.high), 0.95);
   const height = resistance - support;
   const midpoint = (support + resistance) / 2;
   const heightPct = midpoint > 0 ? height / midpoint : 0;
   if (heightPct < W.MIN_TR_WIDTH_PCT) return null;
-
   const closes = win.map(b => b.close);
   const slope = linearSlope(closes);
   const totalMovePct = closes[0] > 0 ? (slope * closes.length) / closes[0] : 0;
   if (Math.abs(totalMovePct) > W.MAX_TR_TREND_PCT) return null;
-
   return { support, resistance, midpoint, height, heightPct, nBars: win.length };
 }
-
 function scoreSpring(bar, tr, avgVol, ft) {
   let score = 0;
   const pen = (tr.support - bar.low) / tr.support;
@@ -588,7 +458,6 @@ function scoreSpring(bar, tr, avgVol, ft) {
   else if (ft === false) score -= 5;
   return Math.max(0, Math.min(100, score));
 }
-
 function detectSpring(bars, tr, minScore) {
   const volTail = bars.slice(-W.VOL_AVG_PERIOD).map(b => b.volume);
   const avgVol = volTail.reduce((a, b) => a + b, 0) / volTail.length;
@@ -607,22 +476,14 @@ function detectSpring(bars, tr, minScore) {
     const score = scoreSpring(bar, tr, avgVol, ft);
     const r = bar.high - bar.low;
     const cp = r > 0 ? (bar.close - bar.low) / r : 0;
-    const cand = {
-      barDate: bar.date, barLow: bar.low, barClose: bar.close,
-      barOpen: bar.open, barHigh: bar.high, barVolume: bar.volume,
-      avgVolume30: Math.round(avgVol), volumeRatio: bar.volume / avgVol,
-      penetrationPct: pen * 100, closePosition: cp,
-      followThrough: ft, barsSince: bars.length - 1 - sp, score: score,
-    };
+    const cand = { barDate: bar.date, barLow: bar.low, barClose: bar.close, barOpen: bar.open, barHigh: bar.high, barVolume: bar.volume, avgVolume30: Math.round(avgVol), volumeRatio: bar.volume / avgVol, penetrationPct: pen * 100, closePosition: cp, followThrough: ft, barsSince: bars.length - 1 - sp, score: score };
     if (!best || cand.score > best.score) best = cand;
   }
   if (!best || best.score < minScore) return null;
   if (best.barsSince > W.SPRING_MUST_BE_WITHIN) return null;
   return best;
 }
-
 function round(n, d) { const m = Math.pow(10, d); return Math.round(n * m) / m; }
-
 function buildSignal(ticker, bars, tr, spring, cfg) {
   const last = bars[bars.length - 1];
   const entry = last.close;
@@ -637,7 +498,6 @@ function buildSignal(ticker, bars, tr, spring, cfg) {
   const rr1 = (tp1 - entry) / risk;
   const rr2 = (tp2 - entry) / risk;
   if (rr2 < cfg.minRr) return null;
-  // Fixed position sizing: target $X per trade; risk vs NAV is the OUTCOME.
   const shares = Math.floor(cfg.positionUsd / entry);
   if (shares <= 0) return null;
   const positionValue = shares * entry;
@@ -651,42 +511,22 @@ function buildSignal(ticker, bars, tr, spring, cfg) {
   }
   const v30 = bars.slice(-30).map(b => b.volume).reduce((a, b) => a + b, 0) / 30;
   const volAvg = v30 > 0 ? (last.volume - v30) / v30 * 100 : 0;
-
   return {
-    ticker, name: ticker, sector: "",
-    scanDate: new Date().toISOString().slice(0, 10),
-    price: round(entry, 2),
-    pctChange1d: round(pct1d, 2),
-    volume: last.volume,
-    volChangeVsPrevPct: round(volPrev, 1),
-    volChangeVsAvg30Pct: round(volAvg, 1),
-    entry: round(entry, 2),
-    sl: round(sl, 2),
-    tp1: round(tp1, 2),
-    tp2: round(tp2, 2),
-    riskPerShare: round(risk, 2),
-    rr1: round(rr1, 2),
-    rr2: round(rr2, 2),
-    shares: shares,
-    positionValueUsd: round(positionValue, 2),
-    capitalAtRiskUsd: round(capitalAtRisk, 2),
+    ticker, name: ticker, sector: "", scanDate: new Date().toISOString().slice(0, 10),
+    price: round(entry, 2), pctChange1d: round(pct1d, 2),
+    volume: last.volume, volChangeVsPrevPct: round(volPrev, 1), volChangeVsAvg30Pct: round(volAvg, 1),
+    entry: round(entry, 2), sl: round(sl, 2), tp1: round(tp1, 2), tp2: round(tp2, 2),
+    riskPerShare: round(risk, 2), rr1: round(rr1, 2), rr2: round(rr2, 2),
+    shares, positionValueUsd: round(positionValue, 2), capitalAtRiskUsd: round(capitalAtRisk, 2),
     riskPctOfNav: round(riskPctOfNav, 3),
-    springDate: spring.barDate,
-    springLow: round(spring.barLow, 2),
-    springClose: round(spring.barClose, 2),
-    springVolume: spring.barVolume,
-    springVolumeRatio: round(spring.volumeRatio, 2),
-    penetrationPct: round(spring.penetrationPct, 2),
-    followThrough: spring.followThrough,
-    barsSinceSpring: spring.barsSince,
-    setupScore: spring.score,
-    trSupport: round(tr.support, 2),
-    trResistance: round(tr.resistance, 2),
-    trHeightPct: round(tr.heightPct * 100, 2),
+    springDate: spring.barDate, springLow: round(spring.barLow, 2), springClose: round(spring.barClose, 2),
+    springVolume: spring.barVolume, springVolumeRatio: round(spring.volumeRatio, 2),
+    penetrationPct: round(spring.penetrationPct, 2), followThrough: spring.followThrough,
+    barsSinceSpring: spring.barsSince, setupScore: spring.score,
+    trSupport: round(tr.support, 2), trResistance: round(tr.resistance, 2), trHeightPct: round(tr.heightPct * 100, 2),
     story: null,
   };
 }
-
 function analyze(ticker, bars, cfg) {
   if (!bars || bars.length < W.MIN_BARS) return null;
   const tr = identifyTradingRange(bars);
@@ -695,76 +535,40 @@ function analyze(ticker, bars, cfg) {
   if (!spring) return null;
   return buildSignal(ticker, bars, tr, spring, cfg);
 }
-
-// ===========================================================================
-//  DATA FETCHERS
-// ===========================================================================
 function parseCsv(text) {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) throw new Error("brak danych");
   const header = lines[0].split(",").map(s => s.trim().toLowerCase());
   const idx = name => header.findIndex(h => h === name || h === name.replace(/ /g, ""));
-  const di = idx("date"), oi = idx("open"), hi = idx("high"),
-        li = idx("low"), ci = idx("close"), vi = idx("volume");
-  if ([di, oi, hi, li, ci, vi].some(i => i < 0)) {
-    throw new Error("CSV brak kolumn Date/Open/High/Low/Close/Volume");
-  }
+  const di = idx("date"), oi = idx("open"), hi = idx("high"), li = idx("low"), ci = idx("close"), vi = idx("volume");
+  if ([di, oi, hi, li, ci, vi].some(i => i < 0)) throw new Error("CSV brak kolumn");
   const bars = [];
   for (let i = 1; i < lines.length; i++) {
     const c = lines[i].split(",");
-    const b = {
-      date: c[di],
-      open: parseFloat(c[oi]),
-      high: parseFloat(c[hi]),
-      low: parseFloat(c[li]),
-      close: parseFloat(c[ci]),
-      volume: parseInt(c[vi], 10),
-    };
+    const b = { date: c[di], open: parseFloat(c[oi]), high: parseFloat(c[hi]), low: parseFloat(c[li]), close: parseFloat(c[ci]), volume: parseInt(c[vi], 10) };
     if (!isNaN(b.close) && !isNaN(b.volume) && b.volume >= 0) bars.push(b);
   }
   return bars;
 }
-
-const CORS_PROXIES = [
-  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
-];
+const CORS_PROXIES = [u => `https://corsproxy.io/?${encodeURIComponent(u)}`, u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`];
 let stooqMethod = null;
-
 async function fetchStooq(ticker) {
   const url = `https://stooq.com/q/d/l/?s=${ticker.toLowerCase()}.us&i=d`;
-  const methods = stooqMethod
-    ? [stooqMethod]
-    : ["proxy:0", "proxy:1", "proxy:2"];
-
+  const methods = stooqMethod ? [stooqMethod] : ["proxy:0", "proxy:1", "proxy:2"];
   let networkErr = null;
   for (const m of methods) {
     let resp;
-    try {
-      const target = CORS_PROXIES[parseInt(m.slice(6), 10)](url);
-      resp = await fetch(target);
-    } catch (e) {
-      networkErr = e;
-      continue;
-    }
-    if (!resp.ok) {
-      networkErr = new Error(`HTTP ${resp.status}`);
-      continue;
-    }
+    try { const target = CORS_PROXIES[parseInt(m.slice(6), 10)](url); resp = await fetch(target); }
+    catch (e) { networkErr = e; continue; }
+    if (!resp.ok) { networkErr = new Error(`HTTP ${resp.status}`); continue; }
     const text = await resp.text();
     if (!stooqMethod) stooqMethod = m;
-    if (text.length < 50 ||
-        text.toLowerCase().includes("<html") ||
-        text.toLowerCase().includes("brak danych")) {
-      throw new Error("brak danych");
-    }
+    if (text.length < 50 || text.toLowerCase().includes("<html") || text.toLowerCase().includes("brak danych")) throw new Error("brak danych");
     return parseCsv(text);
   }
   if (stooqMethod) stooqMethod = null;
   throw new Error("Stooq nieosiągalny (CORS/firewall)");
 }
-
 async function fetchTwelveData(ticker, key) {
   if (!key) throw new Error("brak klucza Twelve Data");
   const url = `https://api.twelvedata.com/time_series?symbol=${ticker}&interval=1day&outputsize=500&apikey=${key}`;
@@ -774,21 +578,14 @@ async function fetchTwelveData(ticker, key) {
   if (j.status === "error") throw new Error(j.message || "API error");
   const v = j.values || [];
   if (v.length === 0) throw new Error("brak danych");
-  return v.slice().reverse().map(x => ({
-    date: x.datetime,
-    open: parseFloat(x.open), high: parseFloat(x.high),
-    low: parseFloat(x.low), close: parseFloat(x.close),
-    volume: parseInt(x.volume || "0", 10),
-  })).filter(b => !isNaN(b.close));
+  return v.slice().reverse().map(x => ({ date: x.datetime, open: parseFloat(x.open), high: parseFloat(x.high), low: parseFloat(x.low), close: parseFloat(x.close), volume: parseInt(x.volume || "0", 10) })).filter(b => !isNaN(b.close));
 }
-
 const csvCache = {};
 async function loadCsvFiles(fileList) {
   for (const f of fileList) {
     const ticker = f.name.replace(/\.(csv|txt)$/i, "").toUpperCase();
     const text = await f.text();
-    try { csvCache[ticker] = parseCsv(text); }
-    catch (e) { log(`${ticker}: ${e.message}`, "err"); }
+    try { csvCache[ticker] = parseCsv(text); } catch (e) { log(`${ticker}: ${e.message}`, "err"); }
   }
 }
 async function fetchFromCsv(ticker) {
@@ -796,99 +593,40 @@ async function fetchFromCsv(ticker) {
   if (!bars) throw new Error("brak pliku CSV");
   return bars;
 }
-
-// ===========================================================================
-//  CONNECTIVITY TEST
-// ===========================================================================
 async function _probeUrl(url, validateBody) {
   try {
     const r = await fetch(url);
-    if (!r.ok && r.status !== 401 && r.status !== 403) {
-      return { ok: false, reason: `HTTP ${r.status}` };
-    }
-    if (validateBody) {
-      const text = await r.text();
-      if (!validateBody(text)) return { ok: false, reason: "nieprawidłowa odpowiedź" };
-    }
+    if (!r.ok && r.status !== 401 && r.status !== 403) return { ok: false, reason: `HTTP ${r.status}` };
+    if (validateBody) { const text = await r.text(); if (!validateBody(text)) return { ok: false, reason: "nieprawidłowa odpowiedź" }; }
     return { ok: true };
-  } catch (e) {
-    return { ok: false, reason: e.message || "network error" };
-  }
+  } catch (e) { return { ok: false, reason: e.message || "network error" }; }
 }
-
 async function testConnectivity() {
   const out = $("config-msg");
   out.innerHTML = '<div class="callout">Testuję połączenia (~10 sek)…</div>';
   $("test-btn").disabled = true;
-
   const tdKey = $("tdkey").value.trim();
   const finKey = $("finkey").value.trim();
-
   const stooqUrl = "https://stooq.com/q/d/l/?s=aapl.us&i=d";
   const proxyNames = ["corsproxy.io", "allorigins.win", "codetabs.com"];
-  const validateStooqCsv = t => t && t.length > 100 &&
-    !t.toLowerCase().includes("<html") && !t.toLowerCase().includes("brak danych");
-
+  const validateStooqCsv = t => t && t.length > 100 && !t.toLowerCase().includes("<html") && !t.toLowerCase().includes("brak danych");
   const probes = [
-    ...CORS_PROXIES.map((fn, i) =>
-      ["Stooq przez " + proxyNames[i], _probeUrl(fn(stooqUrl), validateStooqCsv)]),
-    ["Twelve Data API",
-      _probeUrl(`https://api.twelvedata.com/time_series?symbol=AAPL&interval=1day&outputsize=5&apikey=${tdKey || "demo"}`,
-        t => { try { const j = JSON.parse(t); return j.status !== "error" || /api key/i.test(j.message || ""); } catch { return false; } })],
-    ["Finnhub API",
-      _probeUrl(`https://finnhub.io/api/v1/quote?symbol=AAPL&token=${finKey || "demo"}`,
-        t => { try { const j = JSON.parse(t); return j && (j.c !== undefined || j.error); } catch { return false; } })],
+    ...CORS_PROXIES.map((fn, i) => ["Stooq przez " + proxyNames[i], _probeUrl(fn(stooqUrl), validateStooqCsv)]),
+    ["Twelve Data API", _probeUrl(`https://api.twelvedata.com/time_series?symbol=AAPL&interval=1day&outputsize=5&apikey=${tdKey || "demo"}`, t => { try { const j = JSON.parse(t); return j.status !== "error" || /api key/i.test(j.message || ""); } catch { return false; } })],
+    ["Finnhub API", _probeUrl(`https://finnhub.io/api/v1/quote?symbol=AAPL&token=${finKey || "demo"}`, t => { try { const j = JSON.parse(t); return j && (j.c !== undefined || j.error); } catch { return false; } })],
   ];
-
   const results = [];
-  for (const [name, promise] of probes) {
-    const r = await promise;
-    results.push({ name, ...r });
-  }
-
+  for (const [name, promise] of probes) { const r = await promise; results.push({ name, ...r }); }
   const stooqWorks = results.slice(0, 3).some(r => r.ok);
   const tdWorks = results[3].ok;
-
   let recommendation;
-  if (tdWorks) {
-    recommendation = tdKey
-      ? `<b>Twelve Data działa.</b> Wybierz "Twelve Data" w Źródło danych i skanuj.`
-      : `<b>Twelve Data jest dostępne</b> z Twojej sieci. Zarejestruj się na <a href="https://twelvedata.com/register" target="_blank" rel="noopener" style="color:#88c0d0">twelvedata.com</a>, wklej klucz w polu wyżej.`;
-  } else if (stooqWorks) {
-    const which = results.slice(0, 3).findIndex(r => r.ok);
-    recommendation = `<b>Stooq przez ${proxyNames[which]} działa.</b> Możesz skanować od razu.`;
-  } else {
-    recommendation = `<b>Wszystkie zewnętrzne API zablokowane.</b> Jedyna ścieżka: <b>upload plików CSV</b>.`;
-  }
-
-  out.innerHTML = `
-    <div class="callout" style="border-left-color: ${stooqWorks || tdWorks ? '#a3be8c' : '#bf616a'}; background: ${stooqWorks || tdWorks ? '#1e2e22' : '#2e1919'}; color: ${stooqWorks || tdWorks ? '#a3be8c' : '#d8a4a8'};">
-      <b>Wyniki testu sieci:</b>
-      ${results.map(r =>
-        `<div style="font-family: monospace; font-size: 12px; padding: 2px 0;">
-          ${r.ok ? '✓' : '✗'} ${r.name}: <b>${r.ok ? 'DOSTĘPNE' : 'ZABLOKOWANE'}</b>${r.reason ? ` (${r.reason})` : ''}
-        </div>`).join("")}
-      <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-        ${recommendation}
-      </div>
-    </div>
-  `;
+  if (tdWorks) recommendation = tdKey ? `<b>Twelve Data działa.</b>` : `<b>Twelve Data dostępne</b>. Zarejestruj się na <a href="https://twelvedata.com/register" target="_blank" style="color:#88c0d0">twelvedata.com</a>.`;
+  else if (stooqWorks) { const which = results.slice(0, 3).findIndex(r => r.ok); recommendation = `<b>Stooq przez ${proxyNames[which]} działa.</b>`; }
+  else recommendation = `<b>Wszystkie API zablokowane.</b> Jedyna ścieżka: upload CSV.`;
+  out.innerHTML = `<div class="callout" style="border-left-color: ${stooqWorks || tdWorks ? '#a3be8c' : '#bf616a'}; background: ${stooqWorks || tdWorks ? '#1e2e22' : '#2e1919'}; color: ${stooqWorks || tdWorks ? '#a3be8c' : '#d8a4a8'};"><b>Wyniki testu:</b>${results.map(r => `<div style="font-family: monospace; font-size: 12px; padding: 2px 0;">${r.ok ? '✓' : '✗'} ${r.name}: <b>${r.ok ? 'OK' : 'BLOCKED'}</b>${r.reason ? ` (${r.reason})` : ''}</div>`).join("")}<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">${recommendation}</div></div>`;
   $("test-btn").disabled = false;
 }
-
-// ===========================================================================
-//  FINNHUB STORY
-// ===========================================================================
-const CATALYSTS = {
-  "earnings beat": ["beats", "beat", "tops estimate", "exceeds"],
-  "guidance raise": ["raises guidance", "raises outlook", "raises forecast"],
-  "analyst upgrade": ["upgrade", "overweight", "outperform", "raises price target", "raised price target", "buy rating"],
-  "M&A activity": ["acquir", "merger", "buyout", "takeover", "stake"],
-  "product/launch": ["launch", "approval", "fda", "patent", "breakthrough", "partnership", "contract win"],
-  "insider buying": ["insider buy", "insider purchase", "ceo buys"],
-  "dividend/buyback": ["dividend hike", "buyback", "share repurchase"],
-};
-
+const CATALYSTS = { "earnings beat":["beats","beat","tops estimate"], "analyst upgrade":["upgrade","overweight","outperform"], "M&A":["acquir","merger","buyout"], "product":["launch","approval","fda","partnership"], "insider buying":["insider buy","insider purchase"] };
 async function finnhub(path, params, key) {
   const url = new URL("https://finnhub.io/api/v1" + path);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
@@ -897,46 +635,30 @@ async function finnhub(path, params, key) {
   if (!r.ok) return null;
   return r.json();
 }
-
 function isoDate(d) { return d.toISOString().slice(0, 10); }
-
 async function fetchStory(ticker, key) {
   const end = new Date();
   const start21 = new Date(end - 21 * 86400000);
   const start90 = new Date(end - 90 * 86400000);
   const start120 = new Date(end - 120 * 86400000);
   const end90 = new Date(end.getTime() + 90 * 86400000);
-
   const [news, earnings, insider, recom] = await Promise.all([
     finnhub("/company-news", { symbol: ticker, from: isoDate(start21), to: isoDate(end) }, key).catch(() => []),
     finnhub("/calendar/earnings", { symbol: ticker, from: isoDate(start120), to: isoDate(end90) }, key).catch(() => null),
     finnhub("/stock/insider-transactions", { symbol: ticker, from: isoDate(start90), to: isoDate(end) }, key).catch(() => null),
     finnhub("/stock/recommendation", { symbol: ticker }, key).catch(() => null),
   ]);
-
-  const story = {
-    catalysts: new Set(), headlines: [],
-    upcomingEarnings: null, lastSurprisePct: null,
-    insiderNet90d: null, analystBuyPct: null,
-  };
-
+  const story = { catalysts: new Set(), headlines: [], upcomingEarnings: null, lastSurprisePct: null, insiderNet90d: null, analystBuyPct: null };
   if (Array.isArray(news)) {
     for (const n of news.slice(0, 25)) {
       const h = (n.headline || "").trim();
       if (!h) continue;
       const lower = h.toLowerCase();
-      for (const [cat, kws] of Object.entries(CATALYSTS))
-        if (kws.some(kw => lower.includes(kw))) story.catalysts.add(cat);
-      story.headlines.push({
-        date: new Date((n.datetime || 0) * 1000).toISOString().slice(0, 10),
-        source: n.source || "",
-        headline: h,
-        url: n.url || "",
-      });
+      for (const [cat, kws] of Object.entries(CATALYSTS)) if (kws.some(kw => lower.includes(kw))) story.catalysts.add(cat);
+      story.headlines.push({ date: new Date((n.datetime || 0) * 1000).toISOString().slice(0, 10), source: n.source || "", headline: h, url: n.url || "" });
     }
   }
   story.headlines = story.headlines.slice(0, 8);
-
   if (earnings && earnings.earningsCalendar) {
     const arr = earnings.earningsCalendar;
     const past = arr.filter(e => e.epsActual != null);
@@ -949,266 +671,134 @@ async function fetchStory(ticker, key) {
         if (surprise > 3) story.catalysts.add("earnings beat");
       }
     }
-    if (upcoming.length) {
-      story.upcomingEarnings = upcoming.sort((a, b) => (a.date || "").localeCompare(b.date || ""))[0].date;
-    }
+    if (upcoming.length) story.upcomingEarnings = upcoming.sort((a, b) => (a.date || "").localeCompare(b.date || ""))[0].date;
   }
-
   if (Array.isArray(insider) && insider.data) {
     const net = insider.data.reduce((s, i) => s + (i.change || 0), 0);
     story.insiderNet90d = net;
     if (net > 0) story.catalysts.add("insider buying");
-  } else if (Array.isArray(insider)) {
-    const net = insider.reduce((s, i) => s + (i.change || 0), 0);
-    story.insiderNet90d = net;
-    if (net > 0) story.catalysts.add("insider buying");
   }
-
   if (Array.isArray(recom) && recom.length) {
     const latest = recom.sort((a, b) => (b.period || "").localeCompare(a.period || ""))[0];
     const t = (latest.strongBuy || 0) + (latest.buy || 0) + (latest.hold || 0) + (latest.sell || 0) + (latest.strongSell || 0);
-    if (t > 0) {
-      story.analystBuyPct = ((latest.strongBuy || 0) + (latest.buy || 0)) / t * 100;
-      if (story.analystBuyPct >= 70) story.catalysts.add("analyst upgrade");
-    }
+    if (t > 0) { story.analystBuyPct = ((latest.strongBuy || 0) + (latest.buy || 0)) / t * 100; if (story.analystBuyPct >= 70) story.catalysts.add("analyst upgrade"); }
   }
-
   story.catalysts = [...story.catalysts].sort();
   return story;
 }
-
 function storySummary(s) {
   if (!s) return "";
   const parts = [];
   if (s.catalysts && s.catalysts.length) parts.push("Catalysts: " + s.catalysts.join(", "));
-  if (s.lastSurprisePct != null) {
-    const sign = s.lastSurprisePct > 0 ? "+" : "";
-    parts.push(`Last EPS surprise ${sign}${s.lastSurprisePct.toFixed(1)}%`);
-  }
+  if (s.lastSurprisePct != null) parts.push(`EPS surprise ${s.lastSurprisePct > 0 ? "+" : ""}${s.lastSurprisePct.toFixed(1)}%`);
   if (s.upcomingEarnings) parts.push(`Next earnings: ${s.upcomingEarnings}`);
-  if (s.insiderNet90d && s.insiderNet90d > 0) parts.push(`Insiders net BUY ${s.insiderNet90d.toLocaleString()} sh (90d)`);
-  else if (s.insiderNet90d && s.insiderNet90d < 0) parts.push(`Insiders net SELL ${Math.abs(s.insiderNet90d).toLocaleString()} sh (90d)`);
-  if (s.analystBuyPct != null && s.analystBuyPct >= 60) parts.push(`Analysts ${s.analystBuyPct.toFixed(0)}% buy-rated`);
-  return parts.length ? parts.join(" · ") : "No clear catalyst detected.";
+  if (s.insiderNet90d && s.insiderNet90d > 0) parts.push(`Insiders BUY ${s.insiderNet90d.toLocaleString()} sh`);
+  if (s.analystBuyPct != null && s.analystBuyPct >= 60) parts.push(`${s.analystBuyPct.toFixed(0)}% buy-rated`);
+  return parts.length ? parts.join(" · ") : "No clear catalyst.";
 }
-
-// ===========================================================================
-//  CONCURRENCY
-// ===========================================================================
 class Limiter {
-  constructor(max, minIntervalMs = 0) {
-    this.max = max; this.minInterval = minIntervalMs;
-    this.active = 0; this.queue = []; this.lastStart = 0;
-  }
-  async run(fn) {
-    return new Promise((resolve, reject) => {
-      this.queue.push({ fn, resolve, reject });
-      this._dispatch();
-    });
-  }
+  constructor(max, minIntervalMs = 0) { this.max = max; this.minInterval = minIntervalMs; this.active = 0; this.queue = []; this.lastStart = 0; }
+  async run(fn) { return new Promise((resolve, reject) => { this.queue.push({ fn, resolve, reject }); this._dispatch(); }); }
   _dispatch() {
     while (this.active < this.max && this.queue.length) {
       const since = Date.now() - this.lastStart;
-      if (this.minInterval && since < this.minInterval) {
-        setTimeout(() => this._dispatch(), this.minInterval - since);
-        return;
-      }
+      if (this.minInterval && since < this.minInterval) { setTimeout(() => this._dispatch(), this.minInterval - since); return; }
       const { fn, resolve, reject } = this.queue.shift();
       this.lastStart = Date.now();
       this.active++;
-      Promise.resolve().then(fn).then(resolve, reject)
-        .finally(() => { this.active--; this._dispatch(); });
+      Promise.resolve().then(fn).then(resolve, reject).finally(() => { this.active--; this._dispatch(); });
     }
   }
 }
-
-// ===========================================================================
-//  UI
-// ===========================================================================
 const $ = id => document.getElementById(id);
 let aborted = false;
 let scanInProgress = false;
 let currentSignals = [];
 let rescanTimer = null;
-
 function log(msg, cls = "") {
   const el = $("log");
   const entry = document.createElement("div");
   entry.className = "log-entry " + cls;
-  const t = new Date().toLocaleTimeString();
-  entry.textContent = `[${t}] ${msg}`;
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
   el.appendChild(entry);
   el.scrollTop = el.scrollHeight;
 }
-
 function updateProgress(done, total, found, startMs) {
   const pct = total > 0 ? done / total * 100 : 0;
   $("progress-fill").style.width = pct + "%";
   $("progress-text").textContent = `${done} / ${total} (${pct.toFixed(0)}%)`;
   $("found-count").textContent = String(found);
-  const sec = Math.floor((Date.now() - startMs) / 1000);
-  $("time-elapsed").textContent = `${sec} sek`;
+  $("time-elapsed").textContent = `${Math.floor((Date.now() - startMs) / 1000)} sek`;
 }
-
 function rowClass(score) { return score >= 80 ? "prime" : (score >= 70 ? "good" : "ok"); }
-function ftBadge(ft) {
-  if (ft === true) return '<span class="badge badge-yes">✓ follow-through</span>';
-  if (ft === false) return '<span class="badge badge-no">brak follow-through</span>';
-  return '<span class="badge badge-pending">dziś</span>';
-}
-function esc(s) {
-  if (s == null) return "";
-  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
+function ftBadge(ft) { if (ft === true) return '<span class="badge badge-yes">✓ FT</span>'; if (ft === false) return '<span class="badge badge-no">no FT</span>'; return '<span class="badge badge-pending">dziś</span>'; }
+function esc(s) { if (s == null) return ""; return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
 function renderSignal(s) {
   const story = s.story;
-  const catalysts = (story && story.catalysts && story.catalysts.length)
-    ? story.catalysts.map(c => `<span class="chip">${esc(c)}</span>`).join("")
-    : '<span class="chip chip-muted">brak wyraźnego katalizatora</span>';
-  const headlinesHtml = (story && story.headlines && story.headlines.length)
-    ? story.headlines.map(h =>
-        `<li><span class="news-date">${esc(h.date)}</span> ` +
-        `<a href="${esc(h.url)}" target="_blank" rel="noopener">${esc(h.headline)}</a> ` +
-        `<span class="news-src">— ${esc(h.source)}</span></li>`).join("")
-    : '<li class="muted">Brak newsów (uzupełnij klucz Finnhub, by widzieć).</li>';
-  const insiderStr = story && story.insiderNet90d != null
-    ? `${story.insiderNet90d > 0 ? "+" : ""}${story.insiderNet90d.toLocaleString()} sh`
-    : "";
+  const catalysts = (story && story.catalysts && story.catalysts.length) ? story.catalysts.map(c => `<span class="chip">${esc(c)}</span>`).join("") : '<span class="chip chip-muted">brak katalizatora</span>';
+  const headlinesHtml = (story && story.headlines && story.headlines.length) ? story.headlines.map(h => `<li><span class="news-date">${esc(h.date)}</span> <a href="${esc(h.url)}" target="_blank" rel="noopener">${esc(h.headline)}</a> <span class="news-src">— ${esc(h.source)}</span></li>`).join("") : '<li class="muted">Brak newsów.</li>';
   const pctCol = s.pctChange1d >= 0 ? "pos" : "neg";
   const volCol = s.volChangeVsAvg30Pct >= 0 ? "pos" : "neg";
-
   const card = document.createElement("article");
   card.className = "signal " + rowClass(s.setupScore);
+  const sigIdx = currentSignals.indexOf(s);
   card.innerHTML = `
     <header class="sig-head">
-      <div>
-        <h3>${esc(s.ticker)} <small>${esc(s.name)}</small></h3>
-        <div class="sig-meta">
-          ${esc(s.sector || "—")} ·
-          Score <b>${s.setupScore}/100</b> ·
-          Spring ${esc(s.springDate)} (${s.barsSinceSpring}d temu) ·
-          ${ftBadge(s.followThrough)}
-        </div>
+      <div><h3>${esc(s.ticker)}</h3>
+        <div class="sig-meta">Score <b>${s.setupScore}/100</b> · Spring ${esc(s.springDate)} (${s.barsSinceSpring}d temu) · ${ftBadge(s.followThrough)}</div>
       </div>
-      <div class="price-block">
-        <div class="price">$${s.price.toFixed(2)}</div>
-        <div class="delta ${pctCol}">${s.pctChange1d >= 0 ? "+" : ""}${s.pctChange1d.toFixed(2)}% d/d</div>
-      </div>
+      <div class="price-block"><div class="price">$${s.price.toFixed(2)}</div><div class="delta ${pctCol}">${s.pctChange1d >= 0 ? "+" : ""}${s.pctChange1d.toFixed(2)}% d/d</div></div>
     </header>
     <section class="cell-grid">
       <div class="cell"><div class="lbl">Entry</div><div class="val">$${s.entry.toFixed(2)}</div></div>
-      <div class="cell">
-        <div class="lbl">Stop loss</div>
-        <div class="val val-sl">$${s.sl.toFixed(2)}</div>
-        <div class="sub">−$${s.riskPerShare.toFixed(2)} / sh</div>
-      </div>
-      <div class="cell">
-        <div class="lbl">TP1 (top TR)</div>
-        <div class="val val-tp">$${s.tp1.toFixed(2)}</div>
-        <div class="sub">R:R ${s.rr1.toFixed(2)} : 1</div>
-      </div>
-      <div class="cell">
-        <div class="lbl">TP2 (measured move)</div>
-        <div class="val val-tp">$${s.tp2.toFixed(2)}</div>
-        <div class="sub">R:R <b>${s.rr2.toFixed(2)} : 1</b></div>
-      </div>
+      <div class="cell"><div class="lbl">SL</div><div class="val val-sl">$${s.sl.toFixed(2)}</div><div class="sub">−$${s.riskPerShare.toFixed(2)}/sh</div></div>
+      <div class="cell"><div class="lbl">TP1</div><div class="val val-tp">$${s.tp1.toFixed(2)}</div><div class="sub">R:R ${s.rr1.toFixed(2)}</div></div>
+      <div class="cell"><div class="lbl">TP2</div><div class="val val-tp">$${s.tp2.toFixed(2)}</div><div class="sub">R:R <b>${s.rr2.toFixed(2)}</b></div></div>
       <div class="cell"><div class="lbl">Akcje</div><div class="val">${s.shares.toLocaleString()}</div></div>
-      <div class="cell"><div class="lbl">Wartość pozycji</div><div class="val">$${s.positionValueUsd.toLocaleString()}</div></div>
-      <div class="cell">
-        <div class="lbl">Ryzyko kapitału</div>
-        <div class="val">$${s.capitalAtRiskUsd.toLocaleString()}</div>
-        <div class="sub">${(s.riskPctOfNav || 0).toFixed(3)}% NAV</div>
-      </div>
-      <div class="cell">
-        <div class="lbl">Wolumen vs avg30</div>
-        <div class="val ${volCol}">${s.volChangeVsAvg30Pct >= 0 ? "+" : ""}${s.volChangeVsAvg30Pct.toFixed(1)}%</div>
-        <div class="sub">${s.volume.toLocaleString()}</div>
-      </div>
+      <div class="cell"><div class="lbl">Pozycja</div><div class="val">$${s.positionValueUsd.toLocaleString()}</div></div>
+      <div class="cell"><div class="lbl">Ryzyko</div><div class="val">$${s.capitalAtRiskUsd.toLocaleString()}</div><div class="sub">${(s.riskPctOfNav || 0).toFixed(3)}% NAV</div></div>
+      <div class="cell"><div class="lbl">Vol vs avg30</div><div class="val ${volCol}">${s.volChangeVsAvg30Pct >= 0 ? "+" : ""}${s.volChangeVsAvg30Pct.toFixed(1)}%</div></div>
     </section>
     <section class="tr-block">
-      <div><b>Trading Range:</b> $${s.trSupport.toFixed(2)} — $${s.trResistance.toFixed(2)}  (${s.trHeightPct.toFixed(1)}% szerokości)</div>
-      <div><b>Spring:</b> low $${s.springLow.toFixed(2)} (penetracja ${s.penetrationPct.toFixed(2)}%), close $${s.springClose.toFixed(2)}, wolumen ${s.springVolumeRatio.toFixed(2)}× śr.</div>
+      <div><b>TR:</b> $${s.trSupport.toFixed(2)} — $${s.trResistance.toFixed(2)} (${s.trHeightPct.toFixed(1)}%)</div>
+      <div><b>Spring:</b> low $${s.springLow.toFixed(2)} (penetracja ${s.penetrationPct.toFixed(2)}%), wolumen ${s.springVolumeRatio.toFixed(2)}×</div>
     </section>
     <section class="story">
       <h4>Story / catalyst</h4>
       <div class="chips">${catalysts}</div>
-      <div style="font-size: 13px;">
-        <b>Summary:</b> ${esc(storySummary(story)) || "—"}<br>
-        ${story && story.upcomingEarnings ? `<b>Next earnings:</b> ${esc(story.upcomingEarnings)} · ` : ""}
-        ${story && story.lastSurprisePct != null ? `<b>Last EPS surprise:</b> ${story.lastSurprisePct >= 0 ? "+" : ""}${story.lastSurprisePct.toFixed(1)}% · ` : ""}
-        ${insiderStr ? `<b>Insider net 90d:</b> ${insiderStr} · ` : ""}
-        ${story && story.analystBuyPct != null ? `<b>Analysts buy-rated:</b> ${story.analystBuyPct.toFixed(0)}%` : ""}
-      </div>
+      <div style="font-size: 13px;"><b>Summary:</b> ${esc(storySummary(story)) || "—"}</div>
       <h4>Recent headlines</h4>
       <ul class="news-list">${headlinesHtml}</ul>
     </section>
-  `;
+    <section style="border-top: 1px solid #2e3a4a; padding-top: 12px; margin-top: 14px; text-align: right;">
+      <button class="btn ghost pdf-btn" data-sig-idx="${sigIdx}" style="font-size: 12px;">Pobierz analizę PDF (Klarman + wzorzec + wykres)</button>
+    </section>`;
   $("signals").appendChild(card);
 }
-
-function notify(s) {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  try {
-    new Notification(`Wyckoff Spring: ${s.ticker}`, {
-      body: `$${s.price.toFixed(2)} · R:R ${s.rr2.toFixed(2)} · score ${s.setupScore}/100`,
-    });
-  } catch (e) {}
-}
-
-// ===========================================================================
-//  EXPORT
-// ===========================================================================
-function csvEscape(v) {
-  if (v == null) return "";
-  const s = String(v);
-  return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
+function notify(s) { if (!("Notification" in window) || Notification.permission !== "granted") return; try { new Notification(`Wyckoff Spring: ${s.ticker}`, { body: `$${s.price.toFixed(2)} · R:R ${s.rr2.toFixed(2)} · score ${s.setupScore}` }); } catch (e) {} }
+function csvEscape(v) { if (v == null) return ""; const s = String(v); return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
 function exportCsv() {
   if (!currentSignals.length) return;
-  const cols = ["ticker", "scanDate", "price", "pctChange1d", "volume",
-    "volChangeVsAvg30Pct", "entry", "sl", "tp1", "tp2", "rr1", "rr2",
-    "shares", "positionValueUsd", "capitalAtRiskUsd", "riskPctOfNav", "setupScore",
-    "springDate", "springLow", "penetrationPct", "followThrough",
-    "trSupport", "trResistance", "trHeightPct"];
-  const header = cols.join(",");
+  const cols = ["ticker","scanDate","price","pctChange1d","volume","volChangeVsAvg30Pct","entry","sl","tp1","tp2","rr1","rr2","shares","positionValueUsd","capitalAtRiskUsd","riskPctOfNav","setupScore","springDate","springLow","penetrationPct","followThrough","trSupport","trResistance","trHeightPct"];
   const rows = currentSignals.map(s => cols.map(c => csvEscape(s[c])).join(","));
-  const blob = new Blob([header + "\n" + rows.join("\n")], { type: "text/csv" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `wyckoff_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.csv`;
-  a.click();
+  const blob = new Blob([cols.join(",") + "\n" + rows.join("\n")], { type: "text/csv" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `wyckoff_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.csv`; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-
 function saveReport() {
   if (!currentSignals.length) return;
   const cards = $("signals").innerHTML;
   const css = document.querySelector("style").innerHTML;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Wyckoff report ${new Date().toISOString().slice(0,16)}</title><style>${css}</style></head><body>
-    <header class="top"><h1>Wyckoff Spring — raport</h1><p>${new Date().toLocaleString("pl-PL")}</p></header>
-    <main>${cards}</main></body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Wyckoff report</title><style>${css}</style></head><body><header class="top"><h1>Wyckoff report</h1></header><main>${cards}</main></body></html>`;
   const blob = new Blob([html], { type: "text/html" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `wyckoff_report_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.html`;
-  a.click();
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `wyckoff_report_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.html`; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-
-// ===========================================================================
-//  MAIN SCAN
-// ===========================================================================
 async function runScan() {
   if (scanInProgress) return;
-  scanInProgress = true;
-  aborted = false;
-  currentSignals = [];
-  $("signals").innerHTML = "";
-  $("log").innerHTML = "";
-  $("config-msg").innerHTML = "";
+  scanInProgress = true; aborted = false; currentSignals = [];
+  $("signals").innerHTML = ""; $("log").innerHTML = ""; $("config-msg").innerHTML = "";
   $("progress-panel").querySelectorAll(".callout.warn").forEach(n => n.remove());
-
   const cfg = {
     navUsd: parseFloat($("nav").value) || 0,
     positionUsd: parseFloat($("position-usd").value) || 10000,
@@ -1218,207 +808,108 @@ async function runScan() {
     tdKey: $("tdkey").value.trim(),
     finKey: $("finkey").value.trim(),
   };
-
   const universe = buildUniverse($("universe").value);
-  if (!universe.length) {
-    $("config-msg").innerHTML = '<div class="callout warn">Brak tickerów do skanowania.</div>';
-    scanInProgress = false;
-    return;
-  }
-
+  if (!universe.length) { $("config-msg").innerHTML = '<div class="callout warn">Brak tickerów.</div>'; scanInProgress = false; return; }
   $("scan-btn").classList.add("hidden");
   $("stop-btn").classList.remove("hidden");
   $("progress-panel").classList.remove("hidden");
   $("signals-section").classList.remove("hidden");
-  $("signals-title").textContent = "Sygnały Wyckoff Spring (skanowanie…)";
+  $("signals-title").textContent = "Sygnały (skanowanie…)";
   $("scan-summary").textContent = "";
-
-  log(`Start. Uniwersum: ${universe.length} tickerów. Źródło: ${cfg.source}. NAV $${cfg.navUsd.toLocaleString()}, pozycja $${cfg.positionUsd.toLocaleString()}, min R:R ${cfg.minRr}, min score ${cfg.minScore}.`, "ok");
-
+  log(`Start. Uniwersum: ${universe.length}. Źródło: ${cfg.source}. NAV $${cfg.navUsd.toLocaleString()}, pozycja $${cfg.positionUsd.toLocaleString()}, min R:R ${cfg.minRr}, min score ${cfg.minScore}.`, "ok");
   let limiter;
-  if (cfg.source === "twelvedata") {
-    limiter = new Limiter(1, 8000);
-  } else if (cfg.source === "stooq") {
-    limiter = new Limiter(5, 120);
-  } else {
-    limiter = new Limiter(8, 0);
-  }
-
+  if (cfg.source === "twelvedata") limiter = new Limiter(1, 8000);
+  else if (cfg.source === "stooq") limiter = new Limiter(5, 120);
+  else limiter = new Limiter(8, 0);
   const startMs = Date.now();
   let done = 0, found = 0, errors = 0;
-
-  const fetcher = cfg.source === "twelvedata" ? t => fetchTwelveData(t, cfg.tdKey)
-                : cfg.source === "csv"        ? fetchFromCsv
-                : fetchStooq;
-
+  const fetcher = cfg.source === "twelvedata" ? t => fetchTwelveData(t, cfg.tdKey) : cfg.source === "csv" ? fetchFromCsv : fetchStooq;
   const tasks = universe.map(ticker => limiter.run(async () => {
     if (aborted) return;
     try {
       const bars = await fetcher(ticker);
       const sig = analyze(ticker, bars, cfg);
       if (sig) {
-        if (cfg.finKey) {
-          try { sig.story = await fetchStory(ticker, cfg.finKey); }
-          catch (e) {}
-        }
+        if (cfg.finKey) { try { sig.story = await fetchStory(ticker, cfg.finKey); } catch (e) {} }
+        sig._bars = bars;
         currentSignals.push(sig);
         renderSignal(sig);
         notify(sig);
         const journaled = addToJournal(sig);
         found++;
-        log(`✓ ${ticker}  RR2 ${sig.rr2.toFixed(2)}  score ${sig.setupScore}  $${sig.price.toFixed(2)}${journaled ? "  → dziennik" : "  (już w dzienniku)"}`, "ok");
+        log(`✓ ${ticker} RR2 ${sig.rr2.toFixed(2)} score ${sig.setupScore} $${sig.price.toFixed(2)}${journaled ? " → dziennik" : " (już w dzienniku)"}`, "ok");
       }
     } catch (e) {
       errors++;
       if (errors <= 5) log(`${ticker}: ${e.message}`, "err");
-      else if (errors === 6) log(`(więcej błędów — wyciszone w logu)`, "err");
-    } finally {
-      done++;
-      updateProgress(done, universe.length, found, startMs);
-    }
+      else if (errors === 6) log(`(więcej błędów wyciszone)`, "err");
+    } finally { done++; updateProgress(done, universe.length, found, startMs); }
   }));
-
   await Promise.all(tasks);
-
-  currentSignals.sort((a, b) =>
-    b.setupScore !== a.setupScore ? b.setupScore - a.setupScore : b.rr2 - a.rr2);
+  currentSignals.sort((a, b) => b.setupScore !== a.setupScore ? b.setupScore - a.setupScore : b.rr2 - a.rr2);
   $("signals").innerHTML = "";
   currentSignals.forEach(renderSignal);
-
   const dt = Math.floor((Date.now() - startMs) / 1000);
-  $("signals-title").textContent = `Sygnały Wyckoff Spring — ${currentSignals.length}`;
+  $("signals-title").textContent = `Sygnały — ${currentSignals.length}`;
   $("scan-summary").textContent = `${universe.length} przeskanowanych, ${errors} bez danych · ${dt} sek`;
-  log(`Zakończono w ${dt} sek. ${currentSignals.length} sygnałów. ${errors} błędów / brak danych.`, "ok");
-
+  log(`Zakończono w ${dt} sek. ${currentSignals.length} sygnałów. ${errors} błędów.`, "ok");
   const errRate = universe.length > 0 ? errors / universe.length : 0;
   if (errRate > 0.5) {
     const tip = document.createElement("div");
     tip.className = "callout warn";
-    if (cfg.source === "stooq") {
-      tip.innerHTML =
-        `<b>${errors} z ${universe.length} tickerów bez danych.</b> ` +
-        `Stooq blokowany przez Twoją sieć. Najszybsza naprawa: <a href="https://twelvedata.com/register" target="_blank" rel="noopener" style="color:#88c0d0">twelvedata.com</a>, klucz API, zmień Źródło na "Twelve Data".`;
-    } else if (cfg.source === "twelvedata") {
-      tip.innerHTML =
-        `<b>${errors} z ${universe.length} tickerów bez danych.</b> ` +
-        `Sprawdź klucz Twelve Data lub czy nie wyczerpałeś limitu (free tier: 800/dzień).`;
-    } else {
-      tip.innerHTML =
-        `<b>${errors} z ${universe.length} tickerów bez danych w CSV.</b> ` +
-        `Sprawdź czy nazwy plików = tickerom i CSV mają min. 365 wierszy.`;
-    }
+    if (cfg.source === "stooq") tip.innerHTML = `<b>${errors} z ${universe.length} bez danych.</b> Spróbuj Twelve Data — rejestracja na twelvedata.com.`;
+    else if (cfg.source === "twelvedata") tip.innerHTML = `<b>${errors} z ${universe.length} bez danych.</b> Sprawdź klucz / dzienny limit (800/dzień free).`;
+    else tip.innerHTML = `<b>${errors} z ${universe.length} bez danych w CSV.</b>`;
     $("progress-panel").appendChild(tip);
   }
-
   $("scan-btn").classList.remove("hidden");
   $("stop-btn").classList.add("hidden");
   $("export-btn").disabled = currentSignals.length === 0;
   $("save-btn").disabled = currentSignals.length === 0;
   scanInProgress = false;
-
   if (!aborted) {
     const dailyTime = $("daily-time").value;
     const rescanMin = parseInt($("rescan-min").value, 10) || 0;
     if (dailyTime && /^\d{1,2}:\d{2}$/.test(dailyTime)) {
       const [hh, mm] = dailyTime.split(":").map(Number);
-      const next = new Date();
-      next.setHours(hh, mm, 0, 0);
+      const next = new Date(); next.setHours(hh, mm, 0, 0);
       if (next <= new Date()) next.setDate(next.getDate() + 1);
-      const delayMs = next - new Date();
       log(`Następny auto-scan: ${next.toLocaleString("pl-PL")}.`, "ok");
-      rescanTimer = setTimeout(runScan, delayMs);
-    } else if (rescanMin > 0) {
-      log(`Auto-rescan za ${rescanMin} min.`, "ok");
-      rescanTimer = setTimeout(runScan, rescanMin * 60 * 1000);
-    }
+      rescanTimer = setTimeout(runScan, next - new Date());
+    } else if (rescanMin > 0) { log(`Auto-rescan za ${rescanMin} min.`, "ok"); rescanTimer = setTimeout(runScan, rescanMin * 60 * 1000); }
   }
 }
-
-// ===========================================================================
-//  JOURNAL
-// ===========================================================================
 const JOURNAL_KEY = "wyck_journal_v1";
-
-function loadJournal() {
-  try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || "[]"); }
-  catch (e) { return []; }
-}
-function persistJournal(arr) {
-  try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(arr)); return true; }
-  catch (e) {
-    setJournalStatus(`Zapis dziennika nie powiódł się: ${e.message}`, "err");
-    return false;
-  }
-}
-function setJournalStatus(msg, cls) {
-  const el = $("journal-status");
-  if (el) { el.textContent = msg; el.style.color = cls === "err" ? "#bf616a" : "#a8b5c8"; }
-}
-function genId() {
-  return (crypto && crypto.randomUUID) ? crypto.randomUUID()
-    : "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
-}
-
+function loadJournal() { try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || "[]"); } catch (e) { return []; } }
+function persistJournal(arr) { try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(arr)); return true; } catch (e) { return false; } }
+function setJournalStatus(msg, cls) { const el = $("journal-status"); if (el) { el.textContent = msg; el.style.color = cls === "err" ? "#bf616a" : "#a8b5c8"; } }
+function genId() { return (crypto && crypto.randomUUID) ? crypto.randomUUID() : "id_" + Date.now().toString(36); }
 function addToJournal(sig) {
   const journal = loadJournal();
   if (journal.some(j => j.ticker === sig.ticker && j.scanDate === sig.scanDate)) return false;
-  journal.push({
-    id: genId(),
-    ticker: sig.ticker,
-    scanDate: sig.scanDate,
-    addedAt: new Date().toISOString(),
-    entry: sig.entry, sl: sig.sl, tp1: sig.tp1, tp2: sig.tp2,
-    rr1: sig.rr1, rr2: sig.rr2,
-    shares: sig.shares,
-    setupScore: sig.setupScore,
-    springDate: sig.springDate,
-    trSupport: sig.trSupport, trResistance: sig.trResistance,
-    catalysts: (sig.story && sig.story.catalysts) ? [...sig.story.catalysts] : [],
-    outcomes: { d5: null, d10: null, d21: null },
-  });
-  persistJournal(journal);
-  updateJournalCount();
-  return true;
+  journal.push({ id: genId(), ticker: sig.ticker, scanDate: sig.scanDate, addedAt: new Date().toISOString(), entry: sig.entry, sl: sig.sl, tp1: sig.tp1, tp2: sig.tp2, rr1: sig.rr1, rr2: sig.rr2, shares: sig.shares, setupScore: sig.setupScore, springDate: sig.springDate, trSupport: sig.trSupport, trResistance: sig.trResistance, catalysts: (sig.story && sig.story.catalysts) ? [...sig.story.catalysts] : [], outcomes: { d5: null, d10: null, d21: null } });
+  persistJournal(journal); updateJournalCount(); return true;
 }
-
-function updateJournalCount() {
-  const el = $("journal-count");
-  if (el) el.textContent = String(loadJournal().length);
-}
-
+function updateJournalCount() { const el = $("journal-count"); if (el) el.textContent = String(loadJournal().length); }
 function classifyOutcome(barsAfter, sl, tp1, tp2) {
-  let result = "open";
-  let resultDay = barsAfter.length;
+  let result = "open", resultDay = barsAfter.length;
   for (let i = 0; i < barsAfter.length; i++) {
     const b = barsAfter[i];
-    const stopped = b.low <= sl;
-    const hitTp2  = b.high >= tp2;
-    const hitTp1  = b.high >= tp1;
-    if (stopped) { result = "stopped"; resultDay = i + 1; break; }
-    if (hitTp2)  { result = "tp2_hit"; resultDay = i + 1; break; }
-    if (hitTp1 && result === "open") { result = "tp1_hit"; resultDay = i + 1; }
+    if (b.low <= sl) { result = "stopped"; resultDay = i + 1; break; }
+    if (b.high >= tp2) { result = "tp2_hit"; resultDay = i + 1; break; }
+    if (b.high >= tp1 && result === "open") { result = "tp1_hit"; resultDay = i + 1; }
   }
   return { result, resultDay };
 }
-
 async function evaluateEntry(entry, fetcher) {
   let bars;
-  try { bars = await fetcher(entry.ticker); }
-  catch (e) { return { error: e.message }; }
+  try { bars = await fetcher(entry.ticker); } catch (e) { return { error: e.message }; }
   if (!bars || bars.length === 0) return { error: "brak danych" };
-
   let scanIdx = bars.findIndex(b => b.date === entry.scanDate);
-  if (scanIdx < 0) {
-    for (let i = 0; i < bars.length; i++) {
-      if (bars[i].date > entry.scanDate) break;
-      scanIdx = i;
-    }
-  }
+  if (scanIdx < 0) { for (let i = 0; i < bars.length; i++) { if (bars[i].date > entry.scanDate) break; scanIdx = i; } }
   if (scanIdx < 0) return { error: "data sygnału przed historią" };
-
   const post = bars.slice(scanIdx + 1);
-  if (post.length === 0) return { error: "brak barów po sygnale" };
-
+  if (post.length === 0) return { error: "brak barów" };
   const risk = entry.entry - entry.sl;
   const out = {};
   for (const h of [5, 10, 21]) {
@@ -1426,363 +917,414 @@ async function evaluateEntry(entry, fetcher) {
     if (win.length === 0) { out[`d${h}`] = null; continue; }
     const cls = classifyOutcome(win, entry.sl, entry.tp1, entry.tp2);
     const lastClose = win[win.length - 1].close;
-    const maxHigh = Math.max(...win.map(b => b.high));
-    const minLow  = Math.min(...win.map(b => b.low));
-    out[`d${h}`] = {
-      barsElapsed: win.length,
-      barsFull: win.length >= h,
-      lastClose: round(lastClose, 2),
-      pctReturn: round((lastClose - entry.entry) / entry.entry * 100, 2),
-      rMultiple: round((lastClose - entry.entry) / risk, 2),
-      maxHigh: round(maxHigh, 2),
-      minLow: round(minLow, 2),
-      mfeR: round((maxHigh - entry.entry) / risk, 2),
-      maeR: round((minLow  - entry.entry) / risk, 2),
-      result: cls.result,
-      resultDay: cls.resultDay,
-      evaluatedAt: new Date().toISOString(),
-    };
+    out[`d${h}`] = { barsElapsed: win.length, barsFull: win.length >= h, lastClose: round(lastClose, 2), pctReturn: round((lastClose - entry.entry) / entry.entry * 100, 2), rMultiple: round((lastClose - entry.entry) / risk, 2), result: cls.result, resultDay: cls.resultDay };
   }
   return out;
 }
-
 async function reEvaluateAll() {
   const journal = loadJournal();
-  if (journal.length === 0) {
-    setJournalStatus("Dziennik jest pusty — najpierw zrób skan."); return;
-  }
+  if (journal.length === 0) { setJournalStatus("Dziennik jest pusty."); return; }
   const source = $("source").value;
   const tdKey = $("tdkey").value.trim();
-  const fetcher = source === "twelvedata" ? t => fetchTwelveData(t, tdKey)
-                : source === "csv"        ? fetchFromCsv
-                : fetchStooq;
-
-  const needsUpdate = journal.filter(e => {
-    return ["d5", "d10", "d21"].some(h => {
-      const o = e.outcomes[h];
-      if (!o) return true;
-      const isFinal = o.barsFull && (o.result === "stopped" || o.result === "tp2_hit");
-      return !isFinal;
-    });
-  });
-
-  if (needsUpdate.length === 0) {
-    setJournalStatus(`Wszystkie ${journal.length} wpisów już rozstrzygnięte.`);
-    return;
-  }
-
-  const limiter = source === "twelvedata" ? new Limiter(1, 8000)
-                : source === "stooq"      ? new Limiter(5, 120)
-                : new Limiter(8, 0);
-
+  const fetcher = source === "twelvedata" ? t => fetchTwelveData(t, tdKey) : source === "csv" ? fetchFromCsv : fetchStooq;
+  const needsUpdate = journal.filter(e => ["d5", "d10", "d21"].some(h => { const o = e.outcomes[h]; if (!o) return true; return !(o.barsFull && (o.result === "stopped" || o.result === "tp2_hit")); }));
+  if (needsUpdate.length === 0) { setJournalStatus(`Wszystkie ${journal.length} wpisów rozstrzygnięte.`); return; }
+  const limiter = source === "twelvedata" ? new Limiter(1, 8000) : source === "stooq" ? new Limiter(5, 120) : new Limiter(8, 0);
   $("evaluate-btn").disabled = true;
   let done = 0, errors = 0;
   setJournalStatus(`Aktualizuję 0 / ${needsUpdate.length}…`);
-
   const tasks = needsUpdate.map(e => limiter.run(async () => {
     const r = await evaluateEntry(e, fetcher);
-    if (r.error) errors++;
-    else e.outcomes = { ...e.outcomes, ...r };
-    done++;
-    setJournalStatus(`Aktualizuję ${done} / ${needsUpdate.length}…`);
+    if (r.error) errors++; else e.outcomes = { ...e.outcomes, ...r };
+    done++; setJournalStatus(`Aktualizuję ${done} / ${needsUpdate.length}…`);
   }));
   await Promise.all(tasks);
   persistJournal(journal);
-  setJournalStatus(`Zaktualizowano ${done - errors} / ${needsUpdate.length} wpisów (${errors} bez danych).`);
+  setJournalStatus(`Zaktualizowano ${done - errors} / ${needsUpdate.length} (${errors} bez danych).`);
   $("evaluate-btn").disabled = false;
   renderJournal();
 }
-
 function aggregateStats(journal, horizon) {
   const ev = journal.filter(j => j.outcomes[horizon] && j.outcomes[horizon].result);
   if (ev.length === 0) return null;
-  const result = (j) => j.outcomes[horizon].result;
-  const wins   = ev.filter(j => result(j) === "tp1_hit" || result(j) === "tp2_hit");
-  const tp1    = ev.filter(j => result(j) === "tp1_hit").length;
-  const tp2    = ev.filter(j => result(j) === "tp2_hit").length;
+  const result = j => j.outcomes[horizon].result;
+  const wins = ev.filter(j => result(j) === "tp1_hit" || result(j) === "tp2_hit");
   const losses = ev.filter(j => result(j) === "stopped");
-  const open   = ev.filter(j => result(j) === "open");
-  const avgR   = ev.reduce((s, j) => s + j.outcomes[horizon].rMultiple, 0) / ev.length;
+  const open = ev.filter(j => result(j) === "open");
+  const avgR = ev.reduce((s, j) => s + j.outcomes[horizon].rMultiple, 0) / ev.length;
   const avgPct = ev.reduce((s, j) => s + j.outcomes[horizon].pctReturn, 0) / ev.length;
-  const winsR  = wins.length   ? wins.reduce((s, j)   => s + j.outcomes[horizon].rMultiple, 0) / wins.length   : 0;
-  const lossR  = losses.length ? losses.reduce((s, j) => s + j.outcomes[horizon].rMultiple, 0) / losses.length : 0;
+  const winsR = wins.length ? wins.reduce((s, j) => s + j.outcomes[horizon].rMultiple, 0) / wins.length : 0;
+  const lossR = losses.length ? losses.reduce((s, j) => s + j.outcomes[horizon].rMultiple, 0) / losses.length : 0;
   const winRate = wins.length / ev.length;
-  const expectancy = winRate * winsR + (1 - winRate) * lossR;
-  return {
-    total: ev.length, wins: wins.length, losses: losses.length, open: open.length,
-    tp1Hits: tp1, tp2Hits: tp2,
-    winRate: winRate * 100, avgR, avgPct,
-    winsAvgR: winsR, lossesAvgR: lossR, expectancy,
-  };
+  return { total: ev.length, wins: wins.length, losses: losses.length, open: open.length, tp1Hits: ev.filter(j => result(j) === "tp1_hit").length, tp2Hits: ev.filter(j => result(j) === "tp2_hit").length, winRate: winRate * 100, avgR, avgPct, expectancy: winRate * winsR + (1 - winRate) * lossR };
 }
-
 function aggregateByScoreBucket(journal, horizon) {
-  const buckets = [
-    { label: "60-69", min: 60, max: 69 },
-    { label: "70-79", min: 70, max: 79 },
-    { label: "80-89", min: 80, max: 89 },
-    { label: "90-100", min: 90, max: 100 },
-  ];
+  const buckets = [{ label: "60-69", min: 60, max: 69 }, { label: "70-79", min: 70, max: 79 }, { label: "80-89", min: 80, max: 89 }, { label: "90-100", min: 90, max: 100 }];
   return buckets.map(b => {
-    const entries = journal.filter(j =>
-      j.setupScore >= b.min && j.setupScore <= b.max &&
-      j.outcomes[horizon] && j.outcomes[horizon].result);
+    const entries = journal.filter(j => j.setupScore >= b.min && j.setupScore <= b.max && j.outcomes[horizon] && j.outcomes[horizon].result);
     if (entries.length === 0) return { ...b, total: 0, wins: 0, winRate: 0 };
-    const wins = entries.filter(j => {
-      const r = j.outcomes[horizon].result;
-      return r === "tp1_hit" || r === "tp2_hit";
-    });
-    return { ...b, total: entries.length, wins: wins.length,
-             winRate: wins.length / entries.length * 100 };
+    const wins = entries.filter(j => ["tp1_hit", "tp2_hit"].includes(j.outcomes[horizon].result));
+    return { ...b, total: entries.length, wins: wins.length, winRate: wins.length / entries.length * 100 };
   });
 }
-
-function statColorCls(winRate) {
-  if (winRate >= 70) return "";
-  if (winRate >= 50) return "mid";
-  return "low";
-}
-
+function statColorCls(winRate) { return winRate >= 70 ? "" : winRate >= 50 ? "mid" : "low"; }
 function renderStats(journal) {
-  const horizons = [
-    { key: "d5",  label: "5 dni handlowych" },
-    { key: "d10", label: "2 tygodnie (10d)" },
-    { key: "d21", label: "1 miesiąc (21d)" },
-  ];
+  const horizons = [{ key: "d5", label: "5 dni" }, { key: "d10", label: "10 dni" }, { key: "d21", label: "21 dni" }];
   $("stats-overview").innerHTML = horizons.map(h => {
     const s = aggregateStats(journal, h.key);
-    if (!s) {
-      return `<div class="stat-card">
-        <h3>${h.label}</h3>
-        <div class="muted" style="font-size: 13px; padding: 12px 0;">
-          Brak ocenionych wpisów. Kliknij <b>Aktualizuj wyniki</b> gdy minie odpowiedni czas od sygnałów.
-        </div>
-      </div>`;
-    }
-    return `<div class="stat-card">
-      <h3>${h.label}</h3>
-      <div class="winrate ${statColorCls(s.winRate)}">${s.winRate.toFixed(0)}%</div>
-      <div class="n-label">win rate · n = ${s.total}</div>
-      <div class="stat-row"><span>TP1 hit</span><b>${s.tp1Hits}</b></div>
-      <div class="stat-row"><span>TP2 hit</span><b>${s.tp2Hits}</b></div>
-      <div class="stat-row"><span>Stop loss</span><b>${s.losses}</b></div>
-      <div class="stat-row"><span>Otwarte</span><b>${s.open}</b></div>
-      <div class="stat-row"><span>Średnie R</span><b>${s.avgR >= 0 ? "+" : ""}${s.avgR.toFixed(2)}R</b></div>
-      <div class="stat-row"><span>Średni zwrot</span><b>${s.avgPct >= 0 ? "+" : ""}${s.avgPct.toFixed(2)}%</b></div>
-      <div class="stat-row"><span>Expectancy</span><b>${s.expectancy >= 0 ? "+" : ""}${s.expectancy.toFixed(2)}R</b></div>
-    </div>`;
+    if (!s) return `<div class="stat-card"><h3>${h.label}</h3><div class="muted" style="padding:12px 0;">Brak wpisów. Kliknij Aktualizuj.</div></div>`;
+    return `<div class="stat-card"><h3>${h.label}</h3><div class="winrate ${statColorCls(s.winRate)}">${s.winRate.toFixed(0)}%</div><div class="n-label">n=${s.total}</div><div class="stat-row"><span>TP1</span><b>${s.tp1Hits}</b></div><div class="stat-row"><span>TP2</span><b>${s.tp2Hits}</b></div><div class="stat-row"><span>Stop</span><b>${s.losses}</b></div><div class="stat-row"><span>Open</span><b>${s.open}</b></div><div class="stat-row"><span>avgR</span><b>${s.avgR >= 0 ? "+" : ""}${s.avgR.toFixed(2)}R</b></div><div class="stat-row"><span>Expectancy</span><b>${s.expectancy >= 0 ? "+" : ""}${s.expectancy.toFixed(2)}R</b></div></div>`;
   }).join("");
 }
-
 function renderBuckets(journal) {
   const horizon = $("journal-horizon").value;
   const buckets = aggregateByScoreBucket(journal, horizon);
   const maxN = Math.max(1, ...buckets.map(b => b.total));
-  $("score-buckets").innerHTML = buckets.map(b => {
-    const widthPct = (b.total / maxN) * 100;
-    const fillCls = statColorCls(b.winRate);
-    return `<div class="bucket-row">
-      <div class="bucket-label">Score ${b.label}</div>
-      <div class="bucket-vis">
-        <div class="bucket-fill ${fillCls}" style="width: ${widthPct}%"></div>
-      </div>
-      <div class="bucket-num">n=${b.total} · ${b.total > 0 ? b.winRate.toFixed(0) + "% win" : "brak danych"}</div>
-    </div>`;
-  }).join("");
+  $("score-buckets").innerHTML = buckets.map(b => `<div class="bucket-row"><div class="bucket-label">Score ${b.label}</div><div class="bucket-vis"><div class="bucket-fill ${statColorCls(b.winRate)}" style="width: ${(b.total / maxN) * 100}%"></div></div><div class="bucket-num">n=${b.total} · ${b.total > 0 ? b.winRate.toFixed(0) + "% win" : "—"}</div></div>`).join("");
 }
-
 function renderJournalTable(journal) {
   const horizon = $("journal-horizon").value;
   const filter = $("journal-filter").value;
   const search = $("journal-search").value.trim().toUpperCase();
-
   let entries = journal.slice();
   if (search) entries = entries.filter(e => e.ticker.includes(search));
-  if (filter === "wins")
-    entries = entries.filter(e => e.outcomes[horizon] && ["tp1_hit","tp2_hit"].includes(e.outcomes[horizon].result));
-  if (filter === "losses")
-    entries = entries.filter(e => e.outcomes[horizon] && e.outcomes[horizon].result === "stopped");
-  if (filter === "open")
-    entries = entries.filter(e => !e.outcomes[horizon] || e.outcomes[horizon].result === "open");
-
+  if (filter === "wins") entries = entries.filter(e => e.outcomes[horizon] && ["tp1_hit", "tp2_hit"].includes(e.outcomes[horizon].result));
+  if (filter === "losses") entries = entries.filter(e => e.outcomes[horizon] && e.outcomes[horizon].result === "stopped");
+  if (filter === "open") entries = entries.filter(e => !e.outcomes[horizon] || e.outcomes[horizon].result === "open");
   entries.sort((a, b) => (b.scanDate || "").localeCompare(a.scanDate || ""));
-  $("journal-table-status").textContent = `${entries.length} z ${journal.length} wpisów`;
-
-  if (entries.length === 0) {
-    $("journal-table").innerHTML =
-      `<tr><td colspan="9" style="text-align: center; padding: 30px;" class="muted">Brak wpisów spełniających filtr.</td></tr>`;
-    return;
-  }
-
+  $("journal-table-status").textContent = `${entries.length} z ${journal.length}`;
+  if (entries.length === 0) { $("journal-table").innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;" class="muted">Brak wpisów.</td></tr>`; return; }
   const rows = entries.map(e => {
     const o = e.outcomes[horizon];
-    let outcomeCell = '<span class="outcome-pending">brak oceny</span>';
-    if (o) {
-      if (o.result === "tp1_hit")     outcomeCell = `<span class="outcome-tp1">TP1 (d${o.resultDay})</span>`;
-      else if (o.result === "tp2_hit") outcomeCell = `<span class="outcome-tp2">TP2 (d${o.resultDay})</span>`;
-      else if (o.result === "stopped") outcomeCell = `<span class="outcome-stopped">Stop (d${o.resultDay})</span>`;
-      else                              outcomeCell = `<span class="outcome-open">Otwarte (${o.barsElapsed}/${horizon.slice(1)}d)</span>`;
-    }
-    const pctCell = o
-      ? `<span class="${o.pctReturn >= 0 ? 'pos' : 'neg'}">${o.pctReturn >= 0 ? '+' : ''}${o.pctReturn.toFixed(2)}%</span>`
-      : "—";
+    let outcomeCell = '<span class="outcome-pending">—</span>';
+    if (o) { if (o.result === "tp1_hit") outcomeCell = `<span class="outcome-tp1">TP1 (d${o.resultDay})</span>`; else if (o.result === "tp2_hit") outcomeCell = `<span class="outcome-tp2">TP2 (d${o.resultDay})</span>`; else if (o.result === "stopped") outcomeCell = `<span class="outcome-stopped">Stop (d${o.resultDay})</span>`; else outcomeCell = `<span class="outcome-open">Open (${o.barsElapsed}/${horizon.slice(1)}d)</span>`; }
+    const pctCell = o ? `<span class="${o.pctReturn >= 0 ? 'pos' : 'neg'}">${o.pctReturn >= 0 ? '+' : ''}${o.pctReturn.toFixed(2)}%</span>` : "—";
     const rCell = o ? `${o.rMultiple >= 0 ? '+' : ''}${o.rMultiple.toFixed(2)}R` : "—";
-    return `<tr>
-      <td><b>${esc(e.ticker)}</b></td>
-      <td>${esc(e.scanDate)}</td>
-      <td>${e.setupScore}</td>
-      <td>$${e.entry.toFixed(2)}</td>
-      <td>$${e.sl.toFixed(2)}</td>
-      <td>${e.rr2.toFixed(2)}</td>
-      <td>${outcomeCell}</td>
-      <td>${pctCell}</td>
-      <td>${rCell}</td>
-    </tr>`;
+    return `<tr><td><b>${esc(e.ticker)}</b></td><td>${esc(e.scanDate)}</td><td>${e.setupScore}</td><td>$${e.entry.toFixed(2)}</td><td>$${e.sl.toFixed(2)}</td><td>${e.rr2.toFixed(2)}</td><td>${outcomeCell}</td><td>${pctCell}</td><td>${rCell}</td></tr>`;
   });
-
-  $("journal-table").innerHTML = `
-    <thead><tr>
-      <th>Ticker</th><th>Data sygnału</th><th>Score</th>
-      <th>Entry</th><th>SL</th><th>R:R2</th>
-      <th>Wynik</th><th>Zwrot</th><th>R multiple</th>
-    </tr></thead>
-    <tbody>${rows.join("")}</tbody>
-  `;
+  $("journal-table").innerHTML = `<thead><tr><th>Ticker</th><th>Data</th><th>Score</th><th>Entry</th><th>SL</th><th>R:R2</th><th>Wynik</th><th>Zwrot</th><th>R</th></tr></thead><tbody>${rows.join("")}</tbody>`;
 }
-
-function renderJournal() {
-  const journal = loadJournal();
-  renderStats(journal);
-  renderBuckets(journal);
-  renderJournalTable(journal);
-  updateJournalCount();
-}
-
+function renderJournal() { const j = loadJournal(); renderStats(j); renderBuckets(j); renderJournalTable(j); updateJournalCount(); }
 function exportJournal() {
   const journal = loadJournal();
-  if (journal.length === 0) { setJournalStatus("Dziennik jest pusty."); return; }
-  const payload = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    entries: journal,
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `wyckoff_journal_${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
+  if (journal.length === 0) { setJournalStatus("Dziennik pusty."); return; }
+  const blob = new Blob([JSON.stringify({ version: 1, entries: journal }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `wyckoff_journal_${new Date().toISOString().slice(0, 10)}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-
 async function importJournal(file) {
   try {
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    const incoming = Array.isArray(parsed) ? parsed
-                    : Array.isArray(parsed.entries) ? parsed.entries
-                    : null;
-    if (!incoming) throw new Error("nieprawidłowy format pliku");
+    const parsed = JSON.parse(await file.text());
+    const incoming = Array.isArray(parsed) ? parsed : Array.isArray(parsed.entries) ? parsed.entries : null;
+    if (!incoming) throw new Error("zły format");
     const existing = loadJournal();
     const byKey = new Map(existing.map(e => [e.ticker + "_" + e.scanDate, e]));
     let added = 0, updated = 0;
     for (const e of incoming) {
       if (!e.ticker || !e.scanDate) continue;
       const key = e.ticker + "_" + e.scanDate;
-      if (byKey.has(key)) {
-        const old = byKey.get(key);
-        old.outcomes = { ...old.outcomes, ...(e.outcomes || {}) };
-        updated++;
-      } else {
-        existing.push(e);
-        byKey.set(key, e);
-        added++;
-      }
+      if (byKey.has(key)) { byKey.get(key).outcomes = { ...byKey.get(key).outcomes, ...(e.outcomes || {}) }; updated++; }
+      else { existing.push(e); byKey.set(key, e); added++; }
     }
     persistJournal(existing);
-    setJournalStatus(`Import OK: ${added} nowych, ${updated} zaktualizowanych.`);
+    setJournalStatus(`Import: ${added} nowych, ${updated} zaktualizowanych.`);
     renderJournal();
-  } catch (e) {
-    setJournalStatus(`Błąd importu: ${e.message}`, "err");
-  }
+  } catch (e) { setJournalStatus(`Błąd: ${e.message}`, "err"); }
 }
-
-function clearJournal() {
-  if (!confirm("Wyczyścić cały dziennik? Tej operacji nie da się cofnąć.")) return;
-  try { localStorage.removeItem(JOURNAL_KEY); } catch (e) {}
-  setJournalStatus("Dziennik wyczyszczony.");
-  renderJournal();
-}
-
+function clearJournal() { if (!confirm("Wyczyścić dziennik?")) return; try { localStorage.removeItem(JOURNAL_KEY); } catch (e) {} setJournalStatus("Wyczyszczone."); renderJournal(); }
 function switchTab(name) {
-  document.querySelectorAll(".tab").forEach(t =>
-    t.classList.toggle("active", t.dataset.tab === name));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
   $("tab-scanner").classList.toggle("hidden", name !== "scanner");
   $("tab-journal").classList.toggle("hidden", name !== "journal");
   if (name === "journal") renderJournal();
 }
-
-// ===========================================================================
-//  UI WIRING
-// ===========================================================================
-$("universe").addEventListener("change", () => {
-  $("custom-tickers-row").classList.toggle("hidden", $("universe").value !== "CUSTOM");
-});
-$("source").addEventListener("change", () => {
-  $("csv-upload-row").classList.toggle("hidden", $("source").value !== "csv");
-});
-$("csv-files").addEventListener("change", async e => {
-  await loadCsvFiles(e.target.files);
-  log(`Załadowano ${Object.keys(csvCache).length} plików CSV.`, "ok");
-});
-$("notify").addEventListener("change", e => {
-  if (e.target.checked && "Notification" in window) {
-    Notification.requestPermission().then(p => {
-      if (p !== "granted") { e.target.checked = false; }
-    });
-  }
-});
-$("scan-btn").addEventListener("click", () => {
-  if (rescanTimer) { clearTimeout(rescanTimer); rescanTimer = null; }
-  runScan().catch(e => log(`FATAL: ${e.message}`, "err"));
-});
-$("stop-btn").addEventListener("click", () => {
-  aborted = true;
-  if (rescanTimer) { clearTimeout(rescanTimer); rescanTimer = null; }
-  log("Anulowano przez użytkownika.", "err");
-  $("scan-btn").classList.remove("hidden");
-  $("stop-btn").classList.add("hidden");
-});
-$("test-btn").addEventListener("click", () => {
-  testConnectivity().catch(e => {
-    $("config-msg").innerHTML = `<div class="callout warn">Błąd testu: ${e.message}</div>`;
-    $("test-btn").disabled = false;
+const KLARMAN_RULES = [
+  { name: "Capital preservation (Margin of Safety)", test: s => s.rr2 >= 3, detail: s => `R:R TP2 = ${s.rr2.toFixed(2)}:1` },
+  { name: "Risk-defined trade (hard SL)", test: s => s.sl > 0, detail: s => `SL @ $${s.sl} ($${s.capitalAtRiskUsd.toLocaleString()} total)` },
+  { name: "Position sizing pod limit", test: s => s.riskPctOfNav < 1, detail: s => `${s.riskPctOfNav.toFixed(3)}% NAV` },
+  { name: "Brak lewara", test: s => s.positionValueUsd <= s.capitalAtRiskUsd * 200, detail: s => `Pozycja $${s.positionValueUsd.toLocaleString()}` },
+  { name: "Niezalezna teza — catalyst", test: s => s.story && s.story.catalysts && s.story.catalysts.length > 0, detail: s => (s.story && s.story.catalysts && s.story.catalysts.length > 0) ? `Catalysts: ${s.story.catalysts.join(', ')}` : "Brak katalizatora" },
+  { name: "Strukturalny setup", test: s => s.setupScore >= 60, detail: s => `Score ${s.setupScore}/100` },
+  { name: "Potwierdzenie (follow-through)", test: s => s.followThrough === true, detail: s => s.followThrough === true ? "Confirmed" : s.followThrough === false ? "Brak FT" : "Pending" },
+  { name: "Patience — swiezy setup", test: s => s.barsSinceSpring <= 3, detail: s => `Spring ${s.barsSinceSpring}d temu` },
+  { name: "Asymmetric upside (R:R >= 3)", test: s => s.rr2 >= 3, detail: s => `R:R = ${s.rr2.toFixed(2)}` },
+  { name: "Plan exit (TP1 + TP2)", test: s => s.tp1 > 0 && s.tp2 > 0, detail: s => `TP1 $${s.tp1}, TP2 $${s.tp2}` },
+];
+function generatePdf(signal) {
+  if (!window.jspdf || !window.jspdf.jsPDF) { alert("jsPDF nie zaladowana. Firewall blokuje cdn.jsdelivr.net?"); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('portrait', 'mm', 'a4');
+  drawPdfHeader(doc, signal);
+  drawKlarmanCompliance(doc, signal);
+  doc.addPage();
+  drawActualChart(doc, signal);
+  doc.addPage();
+  drawTheoreticalChart(doc, signal);
+  doc.save(`wyckoff_${signal.ticker}_${signal.scanDate}.pdf`);
+}
+function drawPdfHeader(doc, s) {
+  doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 60, 100);
+  doc.text(`Wyckoff Spring Analysis: ${s.ticker}`, 10, 18);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(80);
+  doc.text(`Scan: ${s.scanDate}  |  Score: ${s.setupScore}/100  |  R:R TP2: ${s.rr2.toFixed(2)}:1`, 10, 24);
+  doc.text(`Generated: ${new Date().toLocaleString('en-US')}`, 10, 28);
+  const boxY = 33;
+  doc.setFillColor(245, 248, 252); doc.rect(10, boxY, 190, 22, 'F');
+  doc.setDrawColor(180); doc.setLineWidth(0.2); doc.rect(10, boxY, 190, 22);
+  doc.setFontSize(7); doc.setTextColor(80);
+  const cx = [14, 52, 92, 132, 172];
+  ['Entry', 'Stop loss', 'TP1', 'TP2', 'Shares'].forEach((lab, i) => doc.text(lab, cx[i], boxY + 4));
+  doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0); doc.text(`$${s.entry}`, cx[0], boxY + 10);
+  doc.setTextColor(180, 0, 0); doc.text(`$${s.sl}`, cx[1], boxY + 10);
+  doc.setTextColor(0, 140, 0); doc.text(`$${s.tp1}`, cx[2], boxY + 10); doc.text(`$${s.tp2}`, cx[3], boxY + 10);
+  doc.setTextColor(0); doc.text(`${s.shares}`, cx[4], boxY + 10);
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(120);
+  doc.text(`Position: $${s.positionValueUsd.toLocaleString()}`, cx[0], boxY + 17);
+  doc.text(`Risk: $${s.capitalAtRiskUsd.toLocaleString()} (${s.riskPctOfNav.toFixed(3)}%)`, cx[1], boxY + 17);
+  doc.text(`R:R = ${s.rr1.toFixed(2)}`, cx[2], boxY + 17);
+  doc.text(`R:R = ${s.rr2.toFixed(2)}`, cx[3], boxY + 17);
+}
+function drawKlarmanCompliance(doc, s) {
+  const startY = 65;
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 60, 100);
+  doc.text('Klarman 10 Rules — Compliance', 10, startY);
+  doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(120);
+  doc.text('Zasady value-investing Setha Klarmana zaaplikowane do tego setupu.', 10, startY + 5);
+  let y = startY + 12;
+  const rowH = 11;
+  KLARMAN_RULES.forEach((rule, i) => {
+    const passed = rule.test(s);
+    if (i % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(10, y - 5, 190, rowH, 'F'); }
+    if (passed) { doc.setFillColor(0, 150, 0); doc.circle(15, y - 1, 2.2, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.text('OK', 12.5, y + 0.5); }
+    else { doc.setFillColor(200, 30, 30); doc.circle(15, y - 1, 2.2, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.text('X', 14, y + 0.5); }
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(20);
+    doc.text(`${i + 1}. ${rule.name}`, 22, y - 1);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100);
+    doc.text(rule.detail(s), 22, y + 3.5);
+    y += rowH;
   });
-});
+  const passed = KLARMAN_RULES.filter(r => r.test(s)).length;
+  const pct = (passed / KLARMAN_RULES.length) * 100;
+  y += 4;
+  const summBg = passed >= 8 ? [232, 246, 232] : passed >= 6 ? [253, 247, 218] : [250, 232, 232];
+  doc.setFillColor(summBg[0], summBg[1], summBg[2]); doc.rect(10, y - 5, 190, 13, 'F');
+  doc.setDrawColor(180); doc.setLineWidth(0.2); doc.rect(10, y - 5, 190, 13);
+  doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+  const summColor = passed >= 8 ? [0, 110, 0] : passed >= 6 ? [180, 130, 0] : [180, 30, 30];
+  doc.setTextColor(summColor[0], summColor[1], summColor[2]);
+  doc.text(`Compliance: ${passed} / ${KLARMAN_RULES.length}  (${pct.toFixed(0)}%)`, 14, y + 2);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(80);
+  const rec = passed >= 9 ? "PASS — pelne kryteria Klarmana." : passed >= 7 ? "WARUNKOWO — mniejszy size." : "SKIP — nie spelnia minimum.";
+  doc.text(rec, 100, y + 2.5);
+}
+function drawActualChart(doc, s) {
+  const bars = s._bars || [];
+  doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 60, 100);
+  doc.text(`${s.ticker} — wykres z strefami Wyckoff`, 10, 15);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(80);
+  doc.text(`Ostatnie 200 sesji. Spring: ${s.springDate}. Score: ${s.setupScore}/100.`, 10, 21);
+  if (bars.length === 0) { doc.setFontSize(11); doc.setTextColor(180, 0, 0); doc.text('Brak danych OHLC.', 10, 100); return; }
+  const cL = 18, cT = 28, cW = 170, cH = 85, vT = cT + cH + 6, vH = 25;
+  const last = bars.slice(-200);
+  const allPrices = last.flatMap(b => [b.low, b.high]);
+  allPrices.push(s.sl, s.tp1, s.tp2, s.trSupport, s.trResistance);
+  let pMin = Math.min(...allPrices), pMax = Math.max(...allPrices);
+  const padding = (pMax - pMin) * 0.04;
+  pMin -= padding; pMax += padding;
+  const pRange = pMax - pMin;
+  const xS = i => cL + (i / Math.max(1, last.length - 1)) * cW;
+  const yS = p => cT + cH - ((p - pMin) / pRange) * cH;
+  doc.setDrawColor(232); doc.setLineWidth(0.1);
+  for (let i = 0; i <= 5; i++) {
+    const y = cT + (i / 5) * cH;
+    doc.line(cL, y, cL + cW, y);
+    const p = pMax - (i / 5) * pRange;
+    doc.setFontSize(6); doc.setTextColor(150);
+    doc.text(`$${p.toFixed(2)}`, cL + cW + 1, y + 1);
+  }
+  doc.setDrawColor(0, 150, 0); doc.setLineWidth(0.35);
+  if (doc.setLineDashPattern) doc.setLineDashPattern([2, 1], 0);
+  doc.line(cL, yS(s.trSupport), cL + cW, yS(s.trSupport));
+  doc.line(cL, yS(s.trResistance), cL + cW, yS(s.trResistance));
+  if (doc.setLineDashPattern) doc.setLineDashPattern([], 0);
+  doc.setFontSize(7); doc.setTextColor(0, 100, 0);
+  doc.text(`TR support $${s.trSupport}`, cL + 1, yS(s.trSupport) + 3);
+  doc.text(`TR resistance $${s.trResistance}`, cL + 1, yS(s.trResistance) - 1);
+  doc.setDrawColor(220, 0, 0);
+  if (doc.setLineDashPattern) doc.setLineDashPattern([1.5, 1], 0);
+  doc.line(cL, yS(s.sl), cL + cW, yS(s.sl));
+  doc.setTextColor(220, 0, 0); doc.text(`SL $${s.sl}`, cL + 1, yS(s.sl) + 3);
+  doc.setDrawColor(0, 100, 200);
+  doc.line(cL, yS(s.tp1), cL + cW, yS(s.tp1));
+  doc.setTextColor(0, 100, 200); doc.text(`TP1 $${s.tp1}`, cL + 1, yS(s.tp1) - 1);
+  doc.setDrawColor(120, 0, 180);
+  doc.line(cL, yS(s.tp2), cL + cW, yS(s.tp2));
+  doc.setTextColor(120, 0, 180); doc.text(`TP2 $${s.tp2}`, cL + 1, yS(s.tp2) - 1);
+  if (doc.setLineDashPattern) doc.setLineDashPattern([], 0);
+  const cw = Math.max(0.4, cW / last.length * 0.7);
+  last.forEach((bar, i) => {
+    const x = xS(i);
+    const yOpen = yS(bar.open), yClose = yS(bar.close), yHigh = yS(bar.high), yLow = yS(bar.low);
+    const isBull = bar.close >= bar.open;
+    if (isBull) { doc.setDrawColor(0, 130, 0); doc.setFillColor(40, 180, 40); }
+    else { doc.setDrawColor(160, 0, 0); doc.setFillColor(220, 30, 30); }
+    doc.setLineWidth(0.15); doc.line(x, yHigh, x, yLow);
+    const yTop = Math.min(yOpen, yClose), yBot = Math.max(yOpen, yClose);
+    doc.rect(x - cw / 2, yTop, cw, Math.max(0.3, yBot - yTop), 'F');
+  });
+  const springIdx = last.findIndex(b => b.date === s.springDate);
+  if (springIdx >= 0) {
+    const sx = xS(springIdx), sy = yS(s.springLow);
+    doc.setFillColor(255, 165, 0); doc.setDrawColor(200, 90, 0); doc.setLineWidth(0.4);
+    doc.circle(sx, sy, 2.2, 'FD');
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(200, 90, 0);
+    doc.text('SPRING', sx - 6, sy + 7);
+  }
+  const maxVol = Math.max(...last.map(b => b.volume));
+  doc.setFontSize(7); doc.setTextColor(100); doc.text('Wolumen', cL, vT - 2);
+  doc.setDrawColor(220); doc.setLineWidth(0.1); doc.rect(cL, vT, cW, vH);
+  last.forEach((bar, i) => {
+    const x = xS(i);
+    const h = (bar.volume / maxVol) * vH;
+    const isBull = bar.close >= bar.open;
+    doc.setFillColor(isBull ? 40 : 200, isBull ? 160 : 30, isBull ? 40 : 30);
+    doc.rect(x - cw / 2, vT + vH - h, cw, h, 'F');
+  });
+  if (springIdx >= 0) {
+    const sx = xS(springIdx), springBar = last[springIdx];
+    const h = (springBar.volume / maxVol) * vH;
+    doc.setFillColor(255, 165, 0);
+    doc.rect(sx - cw / 2, vT + vH - h, cw, h, 'F');
+  }
+  let aY = vT + vH + 10;
+  doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 60, 100);
+  doc.text('Identyfikacja Phase C — Spring:', 12, aY);
+  aY += 6;
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(40);
+  [
+    `Trading Range:  $${s.trSupport} - $${s.trResistance}  (szer. ${s.trHeightPct.toFixed(1)}%)`,
+    `Spring low:     $${s.springLow}  (penetracja ${s.penetrationPct.toFixed(2)}%)`,
+    `Spring close:   $${s.springClose}  ${s.springClose > s.trSupport ? '> support OK' : '< support slabe'}`,
+    `Wolumen Spring: ${s.springVolumeRatio.toFixed(2)}x sredniej 30d`,
+    `Follow-through: ${s.followThrough === true ? 'POTWIERDZONE' : s.followThrough === false ? 'BRAK' : 'PENDING'}`,
+    `Story: ${(s.story && s.story.catalysts && s.story.catalysts.length) ? s.story.catalysts.join(', ') : 'brak'}`,
+  ].forEach(n => { doc.text('- ' + n, 14, aY); aY += 4.5; });
+}
+function drawTheoreticalChart(doc, s) {
+  doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 60, 100);
+  doc.text('Wzorzec teoretyczny Wyckoff Accumulation', 10, 15);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(80);
+  doc.text(`Idealny setup. Porownaj z ${s.ticker}.`, 10, 21);
+  const cL = 15, cT = 28, cW = 180, cH = 70;
+  doc.setFillColor(252); doc.rect(cL, cT, cW, cH, 'F');
+  doc.setDrawColor(180); doc.setLineWidth(0.2); doc.rect(cL, cT, cW, cH);
+  const path = [[0, 25], [8, 78], [13, 90], [22, 38], [30, 75], [40, 55], [48, 70], [55, 50], [62, 72], [68, 92], [73, 58], [80, 68], [87, 38], [94, 22], [100, 12]];
+  doc.setDrawColor(40, 60, 200); doc.setLineWidth(0.5);
+  for (let i = 1; i < path.length; i++) {
+    const [x1, y1] = path[i - 1], [x2, y2] = path[i];
+    doc.line(cL + x1 / 100 * cW, cT + y1 / 100 * cH, cL + x2 / 100 * cW, cT + y2 / 100 * cH);
+  }
+  doc.setDrawColor(0, 150, 0); doc.setLineWidth(0.3);
+  if (doc.setLineDashPattern) doc.setLineDashPattern([2, 1], 0);
+  doc.line(cL + 8 / 100 * cW, cT + 78 / 100 * cH, cL + 80 / 100 * cW, cT + 78 / 100 * cH);
+  doc.line(cL + 22 / 100 * cW, cT + 38 / 100 * cH, cL + 87 / 100 * cW, cT + 38 / 100 * cH);
+  if (doc.setLineDashPattern) doc.setLineDashPattern([], 0);
+  doc.setFontSize(7); doc.setTextColor(150);
+  ['Phase A', 'Phase B', 'Phase C', 'Phase D', 'Phase E'].forEach((p, i) => doc.text(p, cL + (i * 20 + 8) / 100 * cW, cT + cH + 4));
+  const labels = [
+    { x: 8, y: 78, lab: 'PS', color: [80, 80, 80] },
+    { x: 13, y: 90, lab: 'SC', color: [180, 0, 0] },
+    { x: 22, y: 38, lab: 'AR', color: [80, 80, 80] },
+    { x: 30, y: 75, lab: 'ST', color: [80, 80, 80] },
+    { x: 68, y: 92, lab: 'SPRING', color: [255, 100, 0] },
+    { x: 80, y: 68, lab: 'LPS', color: [80, 80, 80] },
+    { x: 87, y: 38, lab: 'SOS/Entry', color: [0, 140, 0] },
+  ];
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+  labels.forEach(l => {
+    const x = cL + l.x / 100 * cW, y = cT + l.y / 100 * cH;
+    doc.setFillColor(l.color[0], l.color[1], l.color[2]);
+    doc.circle(x, y, 1.5, 'F');
+    doc.setTextColor(l.color[0], l.color[1], l.color[2]);
+    doc.text(l.lab, x + 2.2, y - 1);
+  });
+  let lY = cT + cH + 12;
+  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 60, 100);
+  doc.text('Elementy struktury:', 10, lY);
+  lY += 5;
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(40);
+  [
+    ['PS — Preliminary Support', 'pierwsze zatrzymanie spadku'],
+    ['SC — Selling Climax', 'panic dump, max wolumen'],
+    ['AR — Automatic Rally', 'odbicie po SC'],
+    ['ST — Secondary Test', 'test wsparcia, nizszy wolumen'],
+    ['SPRING (Phase C)', 'falszywe wybicie + recovery'],
+    ['LPS — Last Point of Support', 'test po Springu'],
+    ['SOS — Sign of Strength', 'wybicie ponad TR = ENTRY'],
+  ].forEach(([lab, desc]) => {
+    doc.setFont('helvetica', 'bold'); doc.text(lab, 12, lY);
+    doc.setFont('helvetica', 'normal'); doc.text(desc, 64, lY);
+    lY += 4;
+  });
+  lY += 4;
+  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 60, 100);
+  doc.text(`Co PASUJE / NIE PASUJE — ${s.ticker}:`, 10, lY);
+  lY += 5;
+  const checks = [
+    { ok: s.trHeightPct >= 5, txt: `TR szer: ${s.trHeightPct.toFixed(1)}% (>= 5%)` },
+    { ok: s.penetrationPct >= 0.2 && s.penetrationPct <= 3, txt: `Spring penetracja: ${s.penetrationPct.toFixed(2)}% (0.2-3%)` },
+    { ok: s.springVolumeRatio >= 1.2, txt: `Wolumen Spring: ${s.springVolumeRatio.toFixed(2)}x (>= 1.2x)` },
+    { ok: s.followThrough === true, txt: `Follow-through: ${s.followThrough === true ? 'TAK' : 'NIE/PENDING'}` },
+    { ok: s.barsSinceSpring <= 3, txt: `Swiezosc: ${s.barsSinceSpring}d (<= 3)` },
+    { ok: s.rr2 >= 3, txt: `R:R TP2: ${s.rr2.toFixed(2)}:1 (>= 3:1)` },
+    { ok: s.springClose > s.trSupport, txt: `Recovery: close ${s.springClose > s.trSupport ? '>' : '<'} support` },
+  ];
+  doc.setFontSize(8.5);
+  checks.forEach(c => {
+    if (c.ok) { doc.setFillColor(0, 150, 0); doc.circle(13, lY - 1, 1.5, 'F'); doc.setTextColor(40); }
+    else { doc.setFillColor(200, 30, 30); doc.circle(13, lY - 1, 1.5, 'F'); doc.setTextColor(160, 0, 0); }
+    doc.text(c.txt, 18, lY);
+    lY += 4.5;
+  });
+  const fitCount = checks.filter(c => c.ok).length;
+  const matchPct = (fitCount / checks.length) * 100;
+  lY += 4;
+  const summBg = matchPct >= 80 ? [232, 246, 232] : matchPct >= 60 ? [253, 247, 218] : [250, 232, 232];
+  doc.setFillColor(summBg[0], summBg[1], summBg[2]); doc.rect(10, lY - 5, 190, 12, 'F');
+  doc.setDrawColor(180); doc.setLineWidth(0.2); doc.rect(10, lY - 5, 190, 12);
+  doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+  const c = matchPct >= 80 ? [0, 110, 0] : matchPct >= 60 ? [180, 130, 0] : [180, 30, 30];
+  doc.setTextColor(c[0], c[1], c[2]);
+  doc.text(`Wyckoff fit: ${fitCount}/${checks.length} (${matchPct.toFixed(0)}%)`, 14, lY + 2);
+}
+$("universe").addEventListener("change", () => $("custom-tickers-row").classList.toggle("hidden", $("universe").value !== "CUSTOM"));
+$("source").addEventListener("change", () => $("csv-upload-row").classList.toggle("hidden", $("source").value !== "csv"));
+$("csv-files").addEventListener("change", async e => { await loadCsvFiles(e.target.files); log(`Załadowano ${Object.keys(csvCache).length} CSV.`, "ok"); });
+$("notify").addEventListener("change", e => { if (e.target.checked && "Notification" in window) Notification.requestPermission().then(p => { if (p !== "granted") e.target.checked = false; }); });
+$("scan-btn").addEventListener("click", () => { if (rescanTimer) { clearTimeout(rescanTimer); rescanTimer = null; } runScan().catch(e => log(`FATAL: ${e.message}`, "err")); });
+$("stop-btn").addEventListener("click", () => { aborted = true; if (rescanTimer) { clearTimeout(rescanTimer); rescanTimer = null; } log("Anulowano.", "err"); $("scan-btn").classList.remove("hidden"); $("stop-btn").classList.add("hidden"); });
+$("test-btn").addEventListener("click", () => testConnectivity().catch(e => { $("config-msg").innerHTML = `<div class="callout warn">Błąd: ${e.message}</div>`; $("test-btn").disabled = false; }));
 $("export-btn").addEventListener("click", exportCsv);
 $("save-btn").addEventListener("click", saveReport);
-
-document.querySelectorAll(".tab").forEach(t =>
-  t.addEventListener("click", () => switchTab(t.dataset.tab)));
-$("evaluate-btn").addEventListener("click", () => {
-  reEvaluateAll().catch(e => setJournalStatus(`Błąd: ${e.message}`, "err"));
+$("signals").addEventListener("click", e => {
+  const btn = e.target.closest(".pdf-btn"); if (!btn) return;
+  const sig = currentSignals[parseInt(btn.dataset.sigIdx, 10)];
+  if (!sig) { alert("Sygnał niedostępny."); return; }
+  try { generatePdf(sig); } catch (err) { alert("Błąd PDF: " + err.message); }
 });
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
+$("evaluate-btn").addEventListener("click", () => reEvaluateAll().catch(e => setJournalStatus(`Błąd: ${e.message}`, "err")));
 $("journal-export").addEventListener("click", exportJournal);
-$("journal-import").addEventListener("change", e => {
-  if (e.target.files && e.target.files[0]) importJournal(e.target.files[0]);
-  e.target.value = "";
-});
+$("journal-import").addEventListener("change", e => { if (e.target.files && e.target.files[0]) importJournal(e.target.files[0]); e.target.value = ""; });
 $("journal-clear").addEventListener("click", clearJournal);
 $("journal-horizon").addEventListener("change", renderJournal);
 $("journal-filter").addEventListener("change", renderJournal);
 $("journal-search").addEventListener("input", renderJournal);
 updateJournalCount();
-
 const PERSIST = ["nav", "position-usd", "minrr", "minscore", "universe", "source", "tdkey", "finkey", "rescan-min", "daily-time"];
 try {
-  for (const id of PERSIST) {
-    const v = localStorage.getItem("wyck_" + id);
-    if (v != null) $(id).value = v;
-  }
+  for (const id of PERSIST) { const v = localStorage.getItem("wyck_" + id); if (v != null) $(id).value = v; }
   for (const id of PERSIST) {
     const save = () => { try { localStorage.setItem("wyck_" + id, $(id).value); } catch (e) {} };
     $(id).addEventListener("input", save);
@@ -1791,14 +1333,9 @@ try {
   $("universe").dispatchEvent(new Event("change"));
   $("source").dispatchEvent(new Event("change"));
 } catch (e) {}
-
 if (new URLSearchParams(location.search).get("autoscan") === "1") {
-  setTimeout(() => {
-    log("Autostart przez ?autoscan=1 — uruchamiam skan.", "ok");
-    $("scan-btn").click();
-  }, 1500);
+  setTimeout(() => { log("Autostart ?autoscan=1.", "ok"); $("scan-btn").click(); }, 1500);
 }
 </script>
-
 </body>
 </html>
