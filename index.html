@@ -1108,8 +1108,20 @@ async function finnhub(path, params, key) {
   const url = new URL("https://finnhub.io/api/v1" + path);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("token", key);
-  const r = await fetch(url);
-  if (!r.ok) return null;
+  let r;
+  try { r = await fetch(url); }
+  catch (e) {
+    console.warn(`Finnhub ${path} [${params.symbol || ''}]: network error — ${e.message}`);
+    return null;
+  }
+  if (!r.ok) {
+    const hint = r.status === 401 ? "nieprawidłowy klucz"
+              : r.status === 403 ? "endpoint wymaga premium / brak uprawnień"
+              : r.status === 429 ? "rate limit przekroczony"
+              :                    `HTTP ${r.status}`;
+    console.warn(`Finnhub ${path} [${params.symbol || ''}]: ${hint}`);
+    return null;
+  }
   return r.json();
 }
 
@@ -1193,6 +1205,11 @@ async function fetchStory(ticker, key) {
   story.catalysts = [...story.catalysts].sort();
   // Fundamentals (P/B, P/E, debt/equity, 52w high/low, beta, current ratio) for Klarman scorecard
   story.metrics = metricsResp && metricsResp.metric ? metricsResp.metric : null;
+  // Diagnostic — visible in DevTools Console after scan
+  const m = story.metrics || {};
+  const have = ['pbAnnual', 'peNormalizedAnnual', 'totalDebt/totalEquityAnnual', 'currentRatioAnnual', 'beta', '52WeekHigh', '52WeekLow']
+    .filter(k => m[k] != null).length;
+  console.log(`[${ticker}] Finnhub: news=${(news || []).length}, earnings=${earnings ? 'OK' : '—'}, insider=${insider ? 'OK' : '—'}, recom=${recom ? 'OK' : '—'}, metrics=${story.metrics ? have + '/7 fields' : 'NULL'}`);
   return story;
 }
 
@@ -2015,6 +2032,10 @@ function computeKlarmanScorecard(s) {
   const story = s.story || null;
   const p = s.price;
   function gm(k) { return m && m[k] != null ? Number(m[k]) : null; }
+  // Diagnostic prefix when no metrics — helps user understand what's missing
+  const noMetricsReason = !story            ? "klucz Finnhub nie wpisany lub błąd sieci"
+                       : !story.metrics      ? "Finnhub /stock/metric zwrócił NULL (sprawdź F12 Console)"
+                       :                       "specyficzne pole niedostępne dla tego tickera";
 
   const de    = gm("totalDebt/totalEquityAnnual");
   const cr    = gm("currentRatioAnnual");
@@ -2028,7 +2049,7 @@ function computeKlarmanScorecard(s) {
   const rules = [];
 
   // 1. Ochrona kapitału — bilans + płynność
-  let s1 = null, n1 = "Brak danych finansowych (potrzebny klucz Finnhub)";
+  let s1 = null, n1 = "Brak danych — ${noMetricsReason}";
   if (de != null && cr != null) {
     if (de < 0.5 && cr > 2)        { s1 = 2; n1 = `D/E ${de.toFixed(2)}, current ratio ${cr.toFixed(2)} — silny bilans, niskie ryzyko bankructwa`; }
     else if (de < 1.0 && cr > 1.5) { s1 = 2; n1 = `D/E ${de.toFixed(2)}, CR ${cr.toFixed(2)} — bezpieczny bilans`; }
@@ -2268,13 +2289,107 @@ function generateWyckoffNarrative(s) {
   return n;
 }
 
-function generatePdf(signal) {
+// ---- Polish font support for PDF ----
+// jsPDF default Helvetica doesn't include Polish diacritics. We fetch Roboto
+// (Latin Extended subset) from CDN once and register it with jsPDF. If the
+// CDN is unreachable (corporate firewall) we fall back to transliterating
+// ąćęłńóśźż → acelnoszz so text is at least readable.
+let _pdfFontCache = null; // null=untested, false=failed, {reg, bold}=loaded
+const _PL_TRANS = { 'ą':'a','Ą':'A','ć':'c','Ć':'C','ę':'e','Ę':'E','ł':'l','Ł':'L','ń':'n','Ń':'N','ó':'o','Ó':'O','ś':'s','Ś':'S','ź':'z','Ź':'Z','ż':'z','Ż':'Z' };
+function plToAscii(s) {
+  if (typeof s !== 'string') return s;
+  return s.replace(/[ąĄćĆęĘłŁńŃóÓśŚźŹżŻ]/g, c => _PL_TRANS[c] || c);
+}
+
+async function _fetchTtfAsBase64(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const buf = await r.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + CHUNK, bytes.length)));
+  }
+  return btoa(bin);
+}
+
+async function loadPdfPolishFonts() {
+  if (_pdfFontCache !== null) return _pdfFontCache;
+  // Try multiple CDN locations — first that succeeds wins.
+  const candidates = [
+    {
+      reg:  'https://cdn.jsdelivr.net/gh/google/fonts/apache/roboto/static/Roboto-Regular.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/google/fonts/apache/roboto/static/Roboto-Bold.ttf',
+    },
+    {
+      reg:  'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4.5.8/files/roboto-latin-ext-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4.5.8/files/roboto-latin-ext-700-normal.woff',
+    },
+  ];
+  for (const c of candidates) {
+    try {
+      const [reg, bold] = await Promise.all([_fetchTtfAsBase64(c.reg), _fetchTtfAsBase64(c.bold)]);
+      _pdfFontCache = { reg, bold, source: c.reg };
+      console.log('PDF Polish font loaded from', c.reg);
+      return _pdfFontCache;
+    } catch (e) {
+      console.warn('Font candidate failed:', c.reg, e.message);
+    }
+  }
+  _pdfFontCache = false;
+  console.warn('Wszystkie źródła czcionki niedostępne — używam transliteracji PL→ASCII');
+  return false;
+}
+
+async function applyPolishFont(doc) {
+  const fonts = await loadPdfPolishFonts();
+  if (fonts) {
+    try {
+      doc.addFileToVFS('Roboto-Regular.ttf', fonts.reg);
+      doc.addFileToVFS('Roboto-Bold.ttf', fonts.bold);
+      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+      doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+      // Redirect 'helvetica' calls to 'Roboto'
+      const origSetFont = doc.setFont.bind(doc);
+      doc.setFont = function(family, style) {
+        if (family === 'helvetica') family = 'Roboto';
+        if (style === 'italic') style = 'normal';   // Italic not loaded; reuse normal
+        return origSetFont(family, style || 'normal');
+      };
+      doc.setFont('Roboto', 'normal');
+      return true;
+    } catch (e) {
+      console.warn('Font register failed, falling back to transliteration:', e.message);
+    }
+  }
+  // Fallback — transliterate Polish characters in all text drawn
+  const origText = doc.text.bind(doc);
+  doc.text = function(text, x, y, opts) {
+    let tx;
+    if (typeof text === 'string')      tx = plToAscii(text);
+    else if (Array.isArray(text))      tx = text.map(t => typeof t === 'string' ? plToAscii(t) : t);
+    else                                tx = text;
+    return origText(tx, x, y, opts);
+  };
+  const origSplit = doc.splitTextToSize.bind(doc);
+  doc.splitTextToSize = function(text, w, opts) {
+    const tx = typeof text === 'string' ? plToAscii(text) : text;
+    return origSplit(tx, w, opts);
+  };
+  return false;
+}
+
+async function generatePdf(signal) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert("Biblioteka jsPDF nie zaladowana. Sprawdz polaczenie z cdn.jsdelivr.net (moze byc zablokowane przez firewall).");
+    alert("Biblioteka jsPDF nie załadowana. Sprawdź połączenie z cdn.jsdelivr.net (firewall?).");
     return;
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('portrait', 'mm', 'a4');
+
+  // Setup Polish font (or fallback to ASCII transliteration)
+  await applyPolishFont(doc);
 
   // === PAGE 1: header + Klarman compliance ===
   drawPdfHeader(doc, signal);
@@ -2636,24 +2751,28 @@ function drawActualChart(doc, s) {
   if (s.structure) {
     const st = s.structure;
     const springIdxL = last.findIndex(b => b.date === s.springDate);
-    // Phase A: PS/SC to ST
+
+    // Phase A: PS (or SC) → ST (or AR if no ST)
     let aStart = 0, aEnd = 0;
     if (st.sc) aStart = localIdx(st.sc.idx);
-    if (st.ps) aStart = localIdx(st.ps.idx);
+    if (st.ps) aStart = Math.min(aStart, localIdx(st.ps.idx));
     aEnd = aStart;
     if (st.ar) aEnd = Math.max(aEnd, localIdx(st.ar.idx));
     if (st.st) aEnd = Math.max(aEnd, localIdx(st.st.idx));
-    // Phase B: ST to Spring
+    // Phase B: end of A → Spring - 1
     const bStart = aEnd;
     const bEnd = springIdxL > 0 ? springIdxL - 1 : last.length - 1;
-    // Phase C: around Spring
-    const cStart = springIdxL > 0 ? springIdxL : last.length - 1;
-    let cEnd = cStart;
-    if (st.lps) cEnd = Math.max(cEnd, localIdx(st.lps.idx));
-    cEnd = Math.min(cEnd + 1, last.length - 1);
-    // Phase D: after LPS to SOS or end
+    // Phase C: Spring → LPS (or Spring +3 bars if no LPS yet)
+    const cStart = springIdxL >= 0 ? springIdxL : last.length - 1;
+    let cEnd = cStart + 3;
+    if (st.lps) cEnd = localIdx(st.lps.idx);
+    cEnd = Math.min(last.length - 1, cEnd);
+    // Phase D: LPS → SOS (or end)
     const dStart = cEnd;
     const dEnd = st.sos ? localIdx(st.sos.idx) : last.length - 1;
+    // Phase E: SOS → end (markup continuation — only if SOS confirmed)
+    const eStart = st.sos ? localIdx(st.sos.idx) : null;
+    const eEnd = st.sos ? last.length - 1 : null;
 
     function shade(startI, endI, color) {
       if (endI <= startI) return;
@@ -2661,10 +2780,42 @@ function drawActualChart(doc, s) {
       doc.setFillColor(color[0], color[1], color[2]);
       doc.rect(x1, cT, x2 - x1, cH, 'F');
     }
-    shade(aStart, aEnd, [225, 235, 248]);   // Phase A — light blue
-    shade(bStart, bEnd, [253, 248, 220]);   // Phase B — light yellow
-    shade(cStart, cEnd, [253, 220, 200]);   // Phase C — light orange
-    shade(dStart, dEnd, [225, 245, 225]);   // Phase D — light green
+    // 5 distinct, well-contrasted phase colors
+    shade(aStart, aEnd, [218, 230, 248]);   // A — cool blue   (stop downtrend)
+    shade(bStart, bEnd, [253, 248, 218]);   // B — warm yellow (building cause)
+    shade(cStart, cEnd, [253, 215, 195]);   // C — warm orange (the test = Spring)
+    shade(dStart, dEnd, [218, 240, 215]);   // D — cool green  (markup begin)
+    if (eStart != null) shade(eStart, eEnd, [220, 232, 245]); // E — soft teal (markup continue)
+
+    // Vertical dashed phase divider lines
+    function divider(i) {
+      if (i <= 0 || i >= last.length - 1) return;
+      const x = xS(i);
+      doc.setDrawColor(150);
+      doc.setLineWidth(0.2);
+      if (doc.setLineDashPattern) doc.setLineDashPattern([1.2, 1.2], 0);
+      doc.line(x, cT, x, cT + cH);
+      if (doc.setLineDashPattern) doc.setLineDashPattern([], 0);
+    }
+    divider(aEnd);
+    divider(bEnd);
+    divider(cEnd);
+    if (st.sos) divider(localIdx(st.sos.idx));
+
+    // Phase labels at TOP of chart (visible above bars)
+    function topLabel(startI, endI, lbl, color) {
+      if (endI <= startI) return;
+      const x = (xS(startI) + xS(endI)) / 2 - 6;
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.text(lbl, x, cT + 2);
+    }
+    topLabel(aStart, aEnd, 'Phase A', [70, 100, 160]);
+    topLabel(bStart, bEnd, 'Phase B', [160, 130, 0]);
+    topLabel(cStart, cEnd, 'Phase C', [200, 100, 0]);
+    topLabel(dStart, dEnd, 'Phase D', [0, 130, 0]);
+    if (eStart != null) topLabel(eStart, eEnd, 'Phase E', [0, 110, 130]);
   }
 
   // Grid
@@ -2679,30 +2830,32 @@ function drawActualChart(doc, s) {
     doc.text(`$${p.toFixed(2)}`, cL + cW + 1, y + 1);
   }
 
-  // Phase labels along bottom of chart
+  // Bottom-of-chart phase legend (color swatch + label)
   if (s.structure) {
-    const st = s.structure;
-    const springIdxLb = last.findIndex(b => b.date === s.springDate);
-    function labelPhase(startI, endI, lbl, color) {
-      if (endI <= startI) return;
-      const x = (xS(startI) + xS(endI)) / 2 - 6;
+    const legendY = cT + cH + 3;
+    const legendItems = [
+      { lbl: 'A', name: 'Stop downtrend',   color: [218, 230, 248], txt: [70, 100, 160] },
+      { lbl: 'B', name: 'Build cause',      color: [253, 248, 218], txt: [160, 130, 0] },
+      { lbl: 'C', name: 'Test (Spring)',    color: [253, 215, 195], txt: [200, 100, 0] },
+      { lbl: 'D', name: 'Markup begin',     color: [218, 240, 215], txt: [0, 130, 0] },
+      { lbl: 'E', name: 'Markup continue',  color: [220, 232, 245], txt: [0, 110, 130] },
+    ];
+    let lx = cL;
+    legendItems.forEach(it => {
+      doc.setFillColor(it.color[0], it.color[1], it.color[2]);
+      doc.rect(lx, legendY - 2, 3, 3, 'F');
+      doc.setDrawColor(120);
+      doc.setLineWidth(0.1);
+      doc.rect(lx, legendY - 2, 3, 3);
       doc.setFontSize(6.5);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(color[0], color[1], color[2]);
-      doc.text(lbl, x, cT + cH - 1);
-    }
-    let aS = 0, aE = 0;
-    if (st.sc) aS = localIdx(st.sc.idx);
-    if (st.ps) aS = localIdx(st.ps.idx);
-    aE = aS;
-    if (st.ar) aE = Math.max(aE, localIdx(st.ar.idx));
-    if (st.st) aE = Math.max(aE, localIdx(st.st.idx));
-    labelPhase(aS, aE, 'Phase A', [70, 100, 160]);
-    const bE = springIdxLb > 0 ? springIdxLb - 1 : last.length - 1;
-    labelPhase(aE, bE, 'Phase B', [160, 130, 0]);
-    if (springIdxLb >= 0) labelPhase(springIdxLb - 1, springIdxLb + 2, 'Phase C', [200, 100, 0]);
-    const dStartL = st.lps ? localIdx(st.lps.idx) + 1 : (springIdxLb >= 0 ? springIdxLb + 3 : last.length - 1);
-    labelPhase(dStartL, last.length - 1, 'Phase D', [0, 130, 0]);
+      doc.setTextColor(it.txt[0], it.txt[1], it.txt[2]);
+      doc.text(it.lbl, lx + 4, legendY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80);
+      doc.text(it.name, lx + 7, legendY);
+      lx += 35;
+    });
   }
 
   // TR support/resistance (green dashed)
@@ -3075,8 +3228,14 @@ $("signals").addEventListener("click", e => {
   const idx = parseInt(btn.dataset.sigIdx, 10);
   const sig = currentSignals[idx];
   if (!sig) { alert("Sygnał niedostępny — uruchom skan ponownie."); return; }
-  try { generatePdf(sig); }
-  catch (err) { alert("Błąd generowania PDF: " + err.message); }
+  btn.disabled = true;
+  btn.textContent = "Generuję PDF (ładuję czcionkę)…";
+  generatePdf(sig)
+    .catch(err => alert("Błąd generowania PDF: " + err.message))
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = "Pobierz analizę PDF (Klarman + wzorzec Wyckoff + wykres)";
+    });
 });
 
 // Journal tab wiring
