@@ -2316,29 +2316,28 @@ async function _fetchTtfAsBase64(url) {
 
 async function loadPdfPolishFonts() {
   if (_pdfFontCache !== null) return _pdfFontCache;
-  // Try multiple CDN locations — first that succeeds wins.
+  // Multiple TTF sources — first one that downloads wins.
+  // Note: @fontsource v4/v5 only ships WOFF (no TTF), so we use google/fonts repo.
   const candidates = [
-    {
-      reg:  'https://cdn.jsdelivr.net/gh/google/fonts/apache/roboto/static/Roboto-Regular.ttf',
-      bold: 'https://cdn.jsdelivr.net/gh/google/fonts/apache/roboto/static/Roboto-Bold.ttf',
-    },
-    {
-      reg:  'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4.5.8/files/roboto-latin-ext-400-normal.woff',
-      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4.5.8/files/roboto-latin-ext-700-normal.woff',
-    },
+    { reg:  'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/static/Roboto-Regular.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/static/Roboto-Bold.ttf' },
+    { reg:  'https://cdn.jsdelivr.net/gh/googlefonts/roboto-3-classic@main/src/hinted/Roboto-Regular.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/googlefonts/roboto-3-classic@main/src/hinted/Roboto-Bold.ttf' },
+    { reg:  'https://raw.githubusercontent.com/google/fonts/main/apache/roboto/static/Roboto-Regular.ttf',
+      bold: 'https://raw.githubusercontent.com/google/fonts/main/apache/roboto/static/Roboto-Bold.ttf' },
   ];
   for (const c of candidates) {
     try {
       const [reg, bold] = await Promise.all([_fetchTtfAsBase64(c.reg), _fetchTtfAsBase64(c.bold)]);
       _pdfFontCache = { reg, bold, source: c.reg };
-      console.log('PDF Polish font loaded from', c.reg);
+      console.log('PDF: Polish font loaded from', c.reg, '— sizes', reg.length, '/', bold.length, 'b64 chars');
       return _pdfFontCache;
     } catch (e) {
-      console.warn('Font candidate failed:', c.reg, e.message);
+      console.warn('PDF font candidate failed:', c.reg, '—', e.message);
     }
   }
   _pdfFontCache = false;
-  console.warn('Wszystkie źródła czcionki niedostępne — używam transliteracji PL→ASCII');
+  console.warn('PDF: wszystkie źródła czcionki niedostępne — używam transliteracji PL→ASCII');
   return false;
 }
 
@@ -2348,19 +2347,23 @@ async function applyPolishFont(doc) {
     try {
       doc.addFileToVFS('Roboto-Regular.ttf', fonts.reg);
       doc.addFileToVFS('Roboto-Bold.ttf', fonts.bold);
-      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-      doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+      // CRITICAL: 5th param 'Identity-H' enables Unicode encoding for
+      // Polish diacritics. Without it jsPDF uses WinAnsi and ą/ć/ę/ł/ń/ó/ś/ź/ż
+      // get mangled.
+      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', 400, 'Identity-H');
+      doc.addFont('Roboto-Bold.ttf',    'Roboto', 'bold',   700, 'Identity-H');
       // Redirect 'helvetica' calls to 'Roboto'
       const origSetFont = doc.setFont.bind(doc);
       doc.setFont = function(family, style) {
         if (family === 'helvetica') family = 'Roboto';
-        if (style === 'italic') style = 'normal';   // Italic not loaded; reuse normal
+        if (style === 'italic') style = 'normal';   // Italic TTF not loaded; reuse normal
         return origSetFont(family, style || 'normal');
       };
       doc.setFont('Roboto', 'normal');
+      console.log('PDF: Roboto zarejestrowane z Identity-H — polskie znaki powinny działać');
       return true;
     } catch (e) {
-      console.warn('Font register failed, falling back to transliteration:', e.message);
+      console.warn('PDF: rejestracja fonta nie powiodła się, fallback na transliterację:', e.message);
     }
   }
   // Fallback — transliterate Polish characters in all text drawn
