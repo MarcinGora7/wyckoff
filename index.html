@@ -118,6 +118,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px; }
 .badge-yes { background: #2e4d36; color: #a3be8c; }
 .badge-no  { background: #4d2e2e; color: #bf616a; }
 .badge-pending { background: #4a3e2e; color: #ebcb8b; }
+.tier-badge {
+  display: inline-block; padding: 3px 11px; border-radius: 12px;
+  font-size: 11px; font-weight: 600; margin-right: 4px;
+}
+.tier-lps       { background: #2e4d36; color: #a3be8c; }
+.tier-confirmed { background: #2e3e4d; color: #88c0d0; }
+.tier-fresh     { background: #4a3e2e; color: #ebcb8b; }
 .cell-grid {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
   margin-bottom: 14px;
@@ -301,7 +308,7 @@ footer.bottom {
       <input type="number" id="position-usd" value="10000" min="100" step="100">
     </div>
     <div class="field">
-      <label>Min R:R (TP2)</label>
+      <label>Min R:R FRESH (CONFIRMED 70%, LPS 50% auto)</label>
       <input type="number" id="minrr" value="3" min="1" step="0.5">
     </div>
     <div class="field">
@@ -474,6 +481,7 @@ footer.bottom {
 <script>
 "use strict";
 
+
 // ===========================================================================
 //  TICKER UNIVERSE
 // ===========================================================================
@@ -483,7 +491,7 @@ const TICKERS = {
   NDX: "AAPL ABNB ADBE ADI ADP ADSK AEP AMAT AMD AMGN AMZN ANSS APP ARM ASML AVGO AZN BIIB BKNG BKR CCEP CDNS CDW CEG CHTR CMCSA COST CPRT CRWD CSCO CSGP CSX CTAS CTSH DASH DDOG DLTR DXCM EA EXC FANG FAST FTNT GEHC GFS GILD GOOG GOOGL HON IDXX INTC INTU ISRG KDP KHC KLAC LIN LRCX LULU MAR MCHP MDB MDLZ MELI META MNST MRVL MSFT MU NFLX NVDA NXPI ODFL ON ORLY PANW PAYX PCAR PDD PEP PYPL QCOM REGN ROP ROST SBUX SMCI SNPS TEAM TMUS TSLA TTD TTWO TXN VRSK VRTX WBD WDAY XEL ZS".split(/\s+/),
 
   // S&P 500 — embedded list (current as of January 2026; may drift over time)
-  SP500: ("A AAL AAPL ABBV ABNB ABT ACGL ACN ADBE ADI ADM ADP ADSK AEE AEP AES AFL AIG AIZ AJG AKAM ALB ALGN ALL ALLE AMAT AMCR AMD AME AMGN AMP AMT AMZN ANET ANSS AON AOS APA APD APH APO APTV ARE ATO AVB AVGO AVY AWK AXON AXP AZO BA BAC BALL BAX BBY BDX BEN BF-B BG BIIB BIO BK BKNG BKR BLDR BLK BMY BR BRK-B BRO BSX BWA BX BXP C CAG CAH CARR CAT CB CBOE CBRE CCI CCL CDNS CDW CE CEG CF CFG CHD CHRW CHTR CI CINF CL CLX CMCSA CME CMG CMI CMS CNC CNP COF COIN COO COP COR COST CPAY CPB CPRT CPT CRL CRM CRWD CSCO CSGP CSX CTAS CTLT CTRA CTSH CTVA CVS CVX CZR D DAL DAY DD DE DECK DELL DFS DG DGX DHI DHR DIS DLR DLTR DOC DOV DOW DPZ DRI DTE DUK DVA DVN DXCM EA EBAY ECL ED EFX EG EIX EL ELV EMN EMR ENPH EOG EPAM EQIX EQR EQT ERIE ES ESS ETN ETR EVRG EW EXC EXPD EXPE EXR F FANG FAST FCX FDS FDX FE FFIV FI FICO FIS FITB FMC FOX FOXA FRT FSLR FTNT FTV GD GDDY GE GEHC GEN GEV GILD GIS GL GLW GM GNRC GOOG GOOGL GPC GPN GRMN GS GWW HAL HAS HBAN HCA HD HES HIG HII HLT HOLX HON HPE HPQ HRL HSIC HST HSY HUBB HUM HWM IBM ICE IDXX IEX IFF INCY INTC INTU INVH IP IPG IQV IR IRM ISRG IT ITW IVZ J JBHT JBL JCI JKHY JNJ JNPR JPM K KDP KEY KEYS KHC KIM KKR KLAC KMB KMI KMX KO KR KVUE L LDOS LEN LH LHX LIN LKQ LLY LMT LNT LOW LRCX LULU LUV LVS LW LYB LYV MA MAA MAR MAS MCD MCHP MCK MCO MDLZ MDT MET META MGM MHK MKC MKTX MLM MMC MMM MNST MO MOH MOS MPC MPWR MRK MRNA MRO MS MSCI MSFT MSI MTB MTCH MTD MU NCLH NDAQ NDSN NEE NEM NFLX NI NKE NOC NOW NRG NSC NTAP NTRS NUE NVDA NVR NWS NWSA NXPI O ODFL OKE OMC ON ORCL ORLY OTIS OXY PANW PARA PAYC PAYX PCAR PCG PEG PEP PFE PFG PG PGR PH PHM PKG PLD PLTR PM PNC PNR PNW PODD POOL PPG PPL PRU PSA PSX PTC PWR PYPL QCOM QRVO RCL REG REGN RF RJF RL RMD ROK ROL ROP ROST RSG RTX RVTY SBAC SBUX SCHW SHW SJM SLB SMCI SNA SNPS SO SOLV SPG SPGI SRE STE STLD STT STX STZ SW SWK SWKS SYF SYK SYY T TAP TDG TDY TEL TER TFC TFX TGT TJX TKO TMO TMUS TPL TPR TRGP TRMB TROW TRV TSCO TSLA TSN TT TTWO TXN TXT TYL UAL UBER UDR UHS ULTA UNH UNP UPS URI USB V VICI VLO VLTO VMC VRSK VRSN VRTX VST VTR VTRS VZ WAB WAT WBA WBD WDC WEC WELL WFC WM WMB WMT WRB WST WTW WY WYNN XEL XOM XYL YUM ZBH ZBRA ZTS".split(/\s+/)),
+  SP500: ("A AAL AAPL ABBV ABNB ABT ACGL ACN ADBE ADI ADM ADP ADSK AEE AEP AES AFL AIG AIZ AJG AKAM ALB ALGN ALL ALLE AMAT AMCR AMD AME AMGN AMP AMT AMZN ANET ANSS AON AOS APA APD APH APO APTV ARE ATO AVB AVGO AVY AWK AXON AXP AZO BA BAC BALL BAX BBY BDX BEN BF-B BG BIIB BIO BK BKNG BKR BLDR BLK BMY BR BRK-B BRO BSX BWA BX BXP C CAG CAH CARR CAT CB CBOE CBRE CCI CCL CDNS CDW CE CEG CF CFG CHD CHRW CHTR CI CINF CL CLX CMCSA CME CMG CMI CMS CNC CNP COF COIN COO COP COR COST CPAY CPB CPRT CPT CRL CRM CRWD CSCO CSGP CSX CTAS CTLT CTRA CTSH CTVA CVS CVX CZR D DAL DAY DD DE DECK DELL DFS DG DGX DHI DHR DIS DLR DLTR DOC DOV DOW DPZ DRI DTE DUK DVA DVN DXCM EA EBAY ECL ED EFX EG EIX EL ELV EMN EMR ENPH EOG EPAM EQIX EQR EQT ERIE ES ESS ETN ETR EVRG EW EXC EXPD EXPE EXR F FANG FAST FCX FDS FDX FE FFIV FI FICO FIS FITB FMC FOX FOXA FRT FSLR FTNT FTV GD GDDY GE GEHC GEN GEV GILD GIS GL GLW GM GNRC GOOG GOOGL GPC GPN GRMN GS GWW HAL HAS HBAN HCA HD HES HIG HII HLT HOLX HON HPE HPQ HRL HSIC HST HSY HUBB HUM HWM IBM ICE IDXX IEX IFF INCY INTC INTU INVH IP IPG IQV IR IRM ISRG IT ITW IVZ J JBHT JBL JCI JKHY JNJ JNPR JPM K KDP KEY KEYS KHC KIM KKR KLAC KMB KMI KMX KO KR KVUE L LDOS LEN LH LHX LIN LKQ LLY LMT LNT LOW LRCX LULU LUV LVS LW LYB LYV MA MAA MAR MAS MCD MCHP MCK MCO MDLZ MDT MET META MGM MHK MKC MKTX MLM MMC MMM MNST MO MOH MOS MPC MPWR MRK MRNA MRO MS MSCI MSFT MSI MTB MTCH MTD MU NCLH NDAQ NDSN NEE NEM NFLX NI NKE NOC NOW NRG NSC NTAP NTRS NUE NVDA NVR NWS NWSA NXPI O ODFL OKE OMC ON ORCL ORLY OTIS OXY PANW PARA PAYC PAYX PCAR PCG PEG PEP PFE PFG PG PGR PH PHM PKG PLD PLTR PM PNC PNR PNW PODD POOL PPG PPL PRU PSA PSX PTC PWR PYPL QCOM QRVO RCL REG REGN RF RJF RL RMD ROK ROL ROP ROST RSG RTX RVTY SBAC SBUX SCHW SHW SJM SLB SMCI SNA SNPS SO SOLV SPG SPGI SRE STE STLD STT STX STZ SW SWK SWKS SYF SYK SYY T TAP TDG TDY TEL TER TFC TFX TGT TJX TKO TMO TMUS TPL TPR TRGP TRMB TROW TRV TSCO TSLA TSN TT TTWO TXN TXT TYL UAL UBER UDR UHS ULTA UNH UNP UPS URI USB V VICI VLO VLTO VMC VRSK VRSN VRTX VST VTR VTRS VZ WAB WAT WBA WBD WDC WEC WELL WFC WM WMB WMT WRB WST WTW WY WYNN XEL XOM XYL YUM ZBH ZBRA ZTS").split(/\s+/),
 };
 
 const COMBO_KEYS = {
@@ -506,7 +514,7 @@ function buildUniverse(key) {
 }
 
 // ===========================================================================
-//  WYCKOFF MATH (port of Python wyckoff.py)
+//  WYCKOFF MATH — 3-tier waterfall (LPS → CONFIRMED → FRESH)
 // ===========================================================================
 const W = {
   MIN_BARS: 365, TR_WINDOW: 120, TR_EXCLUDE_RECENT: 3,
@@ -514,6 +522,22 @@ const W = {
   ATR_PERIOD: 14, VOL_AVG_PERIOD: 30,
   MIN_TR_WIDTH_PCT: 0.05, MAX_TR_TREND_PCT: 0.15,
   MIN_PENETRATION_PCT: 0.002, MAX_PENETRATION_PCT: 0.08,
+
+  // Tier 2: CONFIRMED — Spring 4-30 dni temu + odbicie >= 1%
+  CONFIRMED_MIN_BARS: 4,
+  CONFIRMED_MAX_BARS: 30,
+  CONFIRMED_MIN_BOUNCE_PCT: 0.01,
+
+  // Tier 1: LPS — Spring 8-60 dni + pullback w ostatnich 7 sesjach
+  LPS_SPRING_MIN_BARS: 8,
+  LPS_SPRING_MAX_BARS: 60,
+  LPS_PULLBACK_WINDOW: 7,
+  LPS_MAX_VOL_RATIO: 0.9,        // LPS bar volume <= 0.9x avg30
+  LPS_MIN_BOUNCE_PCT: 0.01,       // bounce z LPS low >= 1%
+  LPS_MIN_HIGHER_LOW_PCT: 0.005,  // LPS low >= 0.5% nad Spring low
+
+  // Walidacja starego Spring (TR ważny)
+  TR_BREAKOUT_BUFFER: 1.005,      // close < TR top * 1.005 (jeszcze w TR)
 };
 
 function quantile(arr, q) {
@@ -598,36 +622,122 @@ function scoreSpring(bar, tr, avgVol, ft) {
   return Math.max(0, Math.min(100, score));
 }
 
-function detectSpring(bars, tr, minScore) {
-  const volTail = bars.slice(-W.VOL_AVG_PERIOD).map(b => b.volume);
-  const avgVol = volTail.reduce((a, b) => a + b, 0) / volTail.length;
-  if (avgVol <= 0) return null;
-  const lastN = bars.slice(-W.SPRING_SCAN_WINDOW);
-  const lastIdx = bars.length - 1;
+// Szuka Spring-bara w oknie [length-maxBack, length-minBack].
+// Zwraca null jeśli nie znalazł, lub jeśli Spring został inwalidowany
+// (jakieś zamknięcie po Spring zeszło ≤ Spring low).
+function findSpringInWindow(bars, tr, avgVol, maxBack, minBack, minScore) {
   let best = null;
-  for (let i = 0; i < lastN.length; i++) {
-    const bar = lastN[i];
+  const lastIdx = bars.length - 1;
+  const startIdx = Math.max(0, lastIdx - maxBack + 1);
+  const endIdx = lastIdx - minBack;
+
+  for (let i = startIdx; i <= endIdx; i++) {
+    const bar = bars[i];
     if (bar.low >= tr.support) continue;
     const pen = (tr.support - bar.low) / tr.support;
     if (pen < W.MIN_PENETRATION_PCT || pen > W.MAX_PENETRATION_PCT) continue;
     if (bar.close < tr.support * 0.997) continue;
-    const sp = lastIdx - (lastN.length - 1 - i);
-    const ft = sp < bars.length - 1 ? bars[sp + 1].close > bar.close : null;
+
+    // Spring nadal żyje? Sprawdź czy nic po nim nie zamknęło pod jego low.
+    let invalidated = false;
+    for (let j = i + 1; j < bars.length; j++) {
+      if (bars[j].close < bar.low) { invalidated = true; break; }
+    }
+    if (invalidated) continue;
+
+    const ft = i < bars.length - 1 ? bars[i + 1].close > bar.close : null;
     const score = scoreSpring(bar, tr, avgVol, ft);
     const r = bar.high - bar.low;
     const cp = r > 0 ? (bar.close - bar.low) / r : 0;
     const cand = {
+      barIdx: i,
       barDate: bar.date, barLow: bar.low, barClose: bar.close,
       barOpen: bar.open, barHigh: bar.high, barVolume: bar.volume,
       avgVolume30: Math.round(avgVol), volumeRatio: bar.volume / avgVol,
       penetrationPct: pen * 100, closePosition: cp,
-      followThrough: ft, barsSince: bars.length - 1 - sp, score: score,
+      followThrough: ft, barsSince: bars.length - 1 - i, score: score,
     };
     if (!best || cand.score > best.score) best = cand;
   }
   if (!best || best.score < minScore) return null;
-  if (best.barsSince > W.SPRING_MUST_BE_WITHIN) return null;
   return best;
+}
+
+function _avgVol30(bars) {
+  const v = bars.slice(-W.VOL_AVG_PERIOD).map(b => b.volume);
+  return v.reduce((a, b) => a + b, 0) / v.length;
+}
+
+function detectFreshSpring(bars, tr, minScore) {
+  const avgVol = _avgVol30(bars);
+  if (avgVol <= 0) return null;
+  const sp = findSpringInWindow(bars, tr, avgVol, W.SPRING_SCAN_WINDOW, 0, minScore);
+  if (!sp) return null;
+  if (sp.barsSince > W.SPRING_MUST_BE_WITHIN) return null;
+  sp.tier = 'fresh';
+  return sp;
+}
+
+function detectConfirmedSpring(bars, tr, minScore) {
+  const avgVol = _avgVol30(bars);
+  if (avgVol <= 0) return null;
+  const last = bars[bars.length - 1];
+  const sp = findSpringInWindow(bars, tr, avgVol, W.CONFIRMED_MAX_BARS, W.CONFIRMED_MIN_BARS, minScore);
+  if (!sp) return null;
+  // Cena jeszcze w TR (nie po SOS)
+  if (last.close > tr.resistance * W.TR_BREAKOUT_BUFFER) return null;
+  // Bounce >= 1% od Spring low
+  const bouncePct = (last.close - sp.barLow) / sp.barLow;
+  if (bouncePct < W.CONFIRMED_MIN_BOUNCE_PCT) return null;
+  sp.tier = 'confirmed';
+  sp.bouncePct = bouncePct * 100;
+  return sp;
+}
+
+function detectLPS(bars, tr, minScore) {
+  const avgVol = _avgVol30(bars);
+  if (avgVol <= 0) return null;
+  const last = bars[bars.length - 1];
+  const sp = findSpringInWindow(bars, tr, avgVol, W.LPS_SPRING_MAX_BARS, W.LPS_SPRING_MIN_BARS, minScore);
+  if (!sp) return null;
+  if (last.close > tr.resistance * W.TR_BREAKOUT_BUFFER) return null;
+
+  // Szukaj LPS = najniższy bar w ostatnich N sesjach który spełnia:
+  // higher-low niż Spring + niski wolumen.
+  const startIdx = Math.max(sp.barIdx + 1, bars.length - W.LPS_PULLBACK_WINDOW);
+  let lpsBar = null, lpsIdx = -1;
+  for (let i = startIdx; i < bars.length; i++) {
+    const bar = bars[i];
+    if (bar.low < sp.barLow * (1 + W.LPS_MIN_HIGHER_LOW_PCT)) continue;
+    if (bar.volume > avgVol * W.LPS_MAX_VOL_RATIO) continue;
+    if (!lpsBar || bar.low < lpsBar.low) { lpsBar = bar; lpsIdx = i; }
+  }
+  if (!lpsBar) return null;
+
+  // LPS nie może być dzisiejszym barem — potrzebujemy potwierdzenia bounce
+  const lpsBarsSince = bars.length - 1 - lpsIdx;
+  if (lpsBarsSince < 1) return null;
+
+  // Bounce >= 1% od LPS low
+  const bouncePct = (last.close - lpsBar.low) / lpsBar.low;
+  if (bouncePct < W.LPS_MIN_BOUNCE_PCT) return null;
+
+  sp.tier = 'lps';
+  sp.bouncePct = bouncePct * 100;
+  sp.lps = {
+    barDate: lpsBar.date, barLow: lpsBar.low, barClose: lpsBar.close,
+    barVolume: lpsBar.volume, volumeRatio: lpsBar.volume / avgVol,
+    barsSince: lpsBarsSince,
+    higherLowPct: (lpsBar.low - sp.barLow) / sp.barLow * 100,
+  };
+  return sp;
+}
+
+// Helper dla tier badge w karcie sygnału
+function tierBadge(tier) {
+  if (tier === 'lps')       return '<span class="tier-badge tier-lps">Phase D · LPS</span>';
+  if (tier === 'confirmed') return '<span class="tier-badge tier-confirmed">Phase C ✓</span>';
+  return '<span class="tier-badge tier-fresh">FRESH (Phase C)</span>';
 }
 
 function round(n, d) { const m = Math.pow(10, d); return Math.round(n * m) / m; }
@@ -638,20 +748,31 @@ function buildSignal(ticker, bars, tr, spring, cfg) {
   const atrs = atrSeries(bars, W.ATR_PERIOD);
   const atrVal = atrs[atrs.length - 1];
   const buffer = Math.max(0.5 * atrVal, entry * 0.005);
-  const sl = spring.barLow - buffer;
+
+  // Stop bazuje na LPS low (LPS) lub Spring low (CONFIRMED/FRESH)
+  const stopBasis = spring.tier === 'lps' ? spring.lps.barLow : spring.barLow;
+  const sl = stopBasis - buffer;
   const risk = entry - sl;
   if (risk <= 0) return null;
+
   const tp1 = tr.resistance;
   const tp2 = tr.resistance + tr.height;
   const rr1 = (tp1 - entry) / risk;
   const rr2 = (tp2 - entry) / risk;
-  if (rr2 < cfg.minRr) return null;
-  // Fixed position sizing: target $X per trade; risk vs NAV is the OUTCOME.
+
+  // Min R:R auto-skalowane per tier
+  const tierRrMult = spring.tier === 'lps' ? 0.5
+                   : spring.tier === 'confirmed' ? 0.7
+                   : 1.0;
+  if (rr2 < cfg.minRr * tierRrMult) return null;
+
+  // Fixed position sizing: target $X per trade
   const shares = Math.floor(cfg.positionUsd / entry);
-  if (shares <= 0) return null;  // entry > target position (e.g. BRK.A)
+  if (shares <= 0) return null;
   const positionValue = shares * entry;
   const capitalAtRisk = shares * risk;
   const riskPctOfNav = cfg.navUsd > 0 ? (capitalAtRisk / cfg.navUsd) * 100 : 0;
+
   let pct1d = 0, volPrev = 0;
   if (bars.length >= 2) {
     const prev = bars[bars.length - 2];
@@ -692,6 +813,13 @@ function buildSignal(ticker, bars, tr, spring, cfg) {
     trSupport: round(tr.support, 2),
     trResistance: round(tr.resistance, 2),
     trHeightPct: round(tr.heightPct * 100, 2),
+    // --- Tier metadata ---
+    tier: spring.tier,
+    bouncePct: spring.bouncePct != null ? round(spring.bouncePct, 2) : null,
+    lpsDate: spring.lps ? spring.lps.barDate : null,
+    lpsLow: spring.lps ? round(spring.lps.barLow, 2) : null,
+    lpsVolumeRatio: spring.lps ? round(spring.lps.volumeRatio, 2) : null,
+    lpsBarsSince: spring.lps ? spring.lps.barsSince : null,
     story: null,
   };
 }
@@ -701,9 +829,6 @@ function buildSignal(ticker, bars, tr, spring, cfg) {
 // history so the chart in the PDF can mark each structural element.
 // ---------------------------------------------------------------------------
 function findSellingClimax(bars, tr, avgVol30, atrs) {
-  // SC: earliest high-volume capitulation bar in the TR area.
-  // Criteria: wide range (>= 1.3x ATR), high volume (>= 1.5x avg30),
-  //           near support, recovery off the lows.
   const trStart = Math.max(15, bars.length - W.TR_WINDOW - W.TR_EXCLUDE_RECENT);
   const trEnd = Math.max(trStart, bars.length - W.TR_EXCLUDE_RECENT - 30);
   let best = null;
@@ -730,7 +855,6 @@ function findSellingClimax(bars, tr, avgVol30, atrs) {
 }
 
 function findPreliminarySupport(bars, sc, avgVol30) {
-  // PS: first significant volume increase BEFORE the SC.
   if (!sc) return null;
   const start = Math.max(0, sc.idx - 40);
   for (let i = start; i < sc.idx; i++) {
@@ -745,7 +869,6 @@ function findPreliminarySupport(bars, sc, avgVol30) {
 }
 
 function findAutomaticRally(bars, sc, tr) {
-  // AR: high after SC, defines TR resistance.
   if (!sc) return null;
   const end = Math.min(bars.length, sc.idx + 31);
   let best = { high: -Infinity, idx: -1 };
@@ -762,7 +885,6 @@ function findAutomaticRally(bars, sc, tr) {
 }
 
 function findSecondaryTest(bars, sc, ar, avgVol30) {
-  // ST: test of SC low after AR, ideally with LOWER volume than SC.
   if (!sc || !ar) return null;
   const end = Math.min(bars.length, ar.idx + 80);
   let best = { low: Infinity, idx: -1 };
@@ -783,8 +905,6 @@ function findSecondaryTest(bars, sc, ar, avgVol30) {
 }
 
 function findLastPointOfSupport(bars, spring, avgVol30) {
-  // LPS: low between Spring and current bar, ideally higher than Spring low
-  // and on lower volume.
   if (!spring) return null;
   const springIdx = bars.findIndex(b => b.date === spring.barDate);
   if (springIdx < 0 || springIdx >= bars.length - 2) return null;
@@ -806,7 +926,6 @@ function findLastPointOfSupport(bars, spring, avgVol30) {
 }
 
 function checkSignOfStrength(bars, tr) {
-  // SOS: any recent bar breaking decisively above TR resistance.
   const recent = bars.slice(-7);
   const offset = bars.length - recent.length;
   for (let i = 0; i < recent.length; i++) {
@@ -829,51 +948,43 @@ function analyzeWyckoffStructure(bars, tr, spring) {
   const lps = findLastPointOfSupport(bars, spring, avgVol30);
   const sos = checkSignOfStrength(bars, tr);
 
-  // Quality assessment per element (0-100 each), then combined.
   const elements = [];
-  // PS — 10 pts
   elements.push({
     code: 'PS', name: 'Preliminary Support',
     found: !!ps, weight: 10,
     quality: ps ? Math.min(100, 50 + ps.volRatio * 25) : 0,
     detail: ps ? `${ps.date}, vol ${ps.volRatio.toFixed(2)}x, ${ps.barsBeforeSc}d przed SC` : 'Nie wykryty',
   });
-  // SC — 20 pts
   elements.push({
     code: 'SC', name: 'Selling Climax',
     found: !!sc, weight: 20,
     quality: sc ? Math.min(100, sc.volRatio * 30 + sc.atrMultiple * 15 + sc.closePos * 30) : 0,
     detail: sc ? `${sc.date}, vol ${sc.volRatio.toFixed(2)}x, range ${sc.atrMultiple.toFixed(2)}x ATR, close pos ${(sc.closePos * 100).toFixed(0)}%` : 'Nie wykryty',
   });
-  // AR — 15 pts
   elements.push({
     code: 'AR', name: 'Automatic Rally',
     found: !!ar, weight: 15,
     quality: ar ? Math.max(0, 100 - ar.distFromResistance * 5) : 0,
     detail: ar ? `${ar.date}, high $${ar.high.toFixed(2)}, ${ar.distFromResistance.toFixed(1)}% od TR top` : 'Nie wykryty',
   });
-  // ST — 15 pts
   elements.push({
     code: 'ST', name: 'Secondary Test',
     found: !!st, weight: 15,
     quality: st ? (st.higherLowThanSc ? 50 : 30) + (st.lowerVolThanSc ? 50 : 0) : 0,
     detail: st ? `${st.date}, vol ${st.volRatio.toFixed(2)}x, ${st.higherLowThanSc ? 'wyzsze low ✓' : 'nizsze low'}, ${st.lowerVolThanSc ? 'nizszy vol ✓' : 'WYZSZY vol'}` : 'Nie wykryty',
   });
-  // Spring — 20 pts (already strong score from main detector)
   elements.push({
     code: 'Spring', name: 'Spring (Phase C)',
     found: !!spring, weight: 20,
     quality: spring ? spring.score : 0,
     detail: spring ? `${spring.barDate}, penetracja ${spring.penetrationPct.toFixed(2)}%, vol ${spring.volumeRatio.toFixed(2)}x, score ${spring.score}/100` : 'Nie wykryty',
   });
-  // LPS — 10 pts
   elements.push({
     code: 'LPS', name: 'Last Point of Support',
     found: !!lps, weight: 10,
     quality: lps ? (lps.higherThanSpring ? 50 : 25) + (lps.lowVol ? 50 : 20) : 0,
     detail: lps ? `${lps.date}, ${lps.higherThanSpring ? 'wyzsze low niz Spring ✓' : 'nizsze low'}, vol ${lps.volRatio.toFixed(2)}x` : 'Brak (jeszcze nie uformowany)',
   });
-  // SOS — 10 pts
   elements.push({
     code: 'SOS', name: 'Sign of Strength',
     found: !!sos, weight: 10,
@@ -881,7 +992,6 @@ function analyzeWyckoffStructure(bars, tr, spring) {
     detail: sos ? `${sos.date}, +${sos.aboveResistancePct.toFixed(1)}% nad TR resistance ✓` : 'Brak (wybicia jeszcze nie ma)',
   });
 
-  // Weighted overall quality
   const totalWeight = elements.reduce((a, e) => a + e.weight, 0);
   const weightedScore = elements.reduce((a, e) => a + (e.quality * e.weight), 0) / totalWeight;
 
@@ -897,16 +1007,20 @@ function analyze(ticker, bars, cfg) {
   if (!bars || bars.length < W.MIN_BARS) return null;
   const tr = identifyTradingRange(bars);
   if (!tr) return null;
-  const spring = detectSpring(bars, tr, cfg.minScore);
+
+  // Waterfall: LPS (textbook) → CONFIRMED → FRESH
+  let spring = detectLPS(bars, tr, cfg.minScore);
+  if (!spring) spring = detectConfirmedSpring(bars, tr, cfg.minScore);
+  if (!spring) spring = detectFreshSpring(bars, tr, cfg.minScore);
   if (!spring) return null;
+
   const sig = buildSignal(ticker, bars, tr, spring, cfg);
   if (!sig) return null;
   sig.structure = analyzeWyckoffStructure(bars, tr, spring);
-  // Filter by minimum structure quality — rejects "naked Springs"
-  // without proper Phase A accumulation history.
   if (cfg.minStruct && sig.structure && sig.structure.overallQuality < cfg.minStruct) return null;
   return sig;
 }
+
 
 // ===========================================================================
 //  DATA FETCHERS
@@ -937,20 +1051,16 @@ function parseCsv(text) {
   return bars;
 }
 
-// Stooq.com does NOT send CORS headers, so direct browser fetches are blocked.
-// We try direct first (works in some setups) then fall back to public CORS proxies.
-// The first method that works is cached for the rest of this scan.
+// Stooq.com does NOT send CORS headers — fall back through public CORS proxies.
 const CORS_PROXIES = [
   u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
   u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
 ];
-let stooqMethod = null; // null = probe; otherwise "direct" or "proxy:N"
+let stooqMethod = null;
 
 async function fetchStooq(ticker) {
   const url = `https://stooq.com/q/d/l/?s=${ticker.toLowerCase()}.us&i=d`;
-  // Direct fetch is blocked (Stooq sends no CORS headers) — always route
-  // through one of the public CORS proxies.
   const methods = stooqMethod
     ? [stooqMethod]
     : ["proxy:0", "proxy:1", "proxy:2"];
@@ -963,14 +1073,13 @@ async function fetchStooq(ticker) {
       resp = await fetch(target);
     } catch (e) {
       networkErr = e;
-      continue; // try next method
+      continue;
     }
     if (!resp.ok) {
       networkErr = new Error(`HTTP ${resp.status}`);
       continue;
     }
     const text = await resp.text();
-    // This method works (regardless of per-ticker outcome) — cache it.
     if (!stooqMethod) stooqMethod = m;
     if (text.length < 50 ||
         text.toLowerCase().includes("<html") ||
@@ -979,7 +1088,6 @@ async function fetchStooq(ticker) {
     }
     return parseCsv(text);
   }
-  // All methods failed — reset so we re-probe next time.
   if (stooqMethod) stooqMethod = null;
   throw new Error("Stooq nieosiągalny (CORS/firewall)");
 }
@@ -993,7 +1101,6 @@ async function fetchTwelveData(ticker, key) {
   if (j.status === "error") throw new Error(j.message || "API error");
   const v = j.values || [];
   if (v.length === 0) throw new Error("brak danych");
-  // Twelve Data returns newest first; reverse to chronological
   return v.slice().reverse().map(x => ({
     date: x.datetime,
     open: parseFloat(x.open), high: parseFloat(x.high),
@@ -1019,8 +1126,7 @@ async function fetchFromCsv(ticker) {
 }
 
 // ===========================================================================
-//  CONNECTIVITY TEST — probes each data source to tell the user
-//  what actually works from their network.
+//  CONNECTIVITY TEST
 // ===========================================================================
 async function _probeUrl(url, validateBody) {
   try {
@@ -1051,7 +1157,6 @@ async function testConnectivity() {
   const validateStooqCsv = t => t && t.length > 100 &&
     !t.toLowerCase().includes("<html") && !t.toLowerCase().includes("brak danych");
 
-  // Probe in parallel, then label per source
   const probes = [
     ...CORS_PROXIES.map((fn, i) =>
       ["Stooq przez " + proxyNames[i], _probeUrl(fn(stooqUrl), validateStooqCsv)]),
@@ -1069,7 +1174,6 @@ async function testConnectivity() {
     results.push({ name, ...r });
   }
 
-  // Decide recommendation
   const stooqWorks = results.slice(0, 3).some(r => r.ok);
   const tdWorks = results[3].ok;
   const finWorks = results[4].ok;
@@ -1144,7 +1248,6 @@ async function fetchStory(ticker, key) {
   const start120 = new Date(end - 120 * 86400000);
   const end90 = new Date(end.getTime() + 90 * 86400000);
 
-  // Parallel fetch
   const [news, earnings, insider, recom, metricsResp] = await Promise.all([
     finnhub("/company-news", { symbol: ticker, from: isoDate(start21), to: isoDate(end) }, key).catch(() => []),
     finnhub("/calendar/earnings", { symbol: ticker, from: isoDate(start120), to: isoDate(end90) }, key).catch(() => null),
@@ -1213,9 +1316,7 @@ async function fetchStory(ticker, key) {
   }
 
   story.catalysts = [...story.catalysts].sort();
-  // Fundamentals (P/B, P/E, debt/equity, 52w high/low, beta, current ratio) for Klarman scorecard
   story.metrics = metricsResp && metricsResp.metric ? metricsResp.metric : null;
-  // Diagnostic — visible in DevTools Console after scan
   const m = story.metrics || {};
   const have = ['pbAnnual', 'peNormalizedAnnual', 'totalDebt/totalEquityAnnual', 'currentRatioAnnual', 'beta', '52WeekHigh', '52WeekLow']
     .filter(k => m[k] != null).length;
@@ -1269,7 +1370,7 @@ class Limiter {
 }
 
 // ===========================================================================
-//  UI
+//  UI HELPERS
 // ===========================================================================
 const $ = id => document.getElementById(id);
 let aborted = false;
@@ -1327,30 +1428,34 @@ function renderSignal(s) {
   const card = document.createElement("article");
   card.className = "signal " + rowClass(s.setupScore);
   const sigIdx = currentSignals.indexOf(s);
-  // Conviction tier — Setup + Struktura shown separately
+  // Conviction tier — uses computeConviction so tier bonus is reflected
+  const conv = computeConviction(s);
   const setupPct = s.setupScore;
   const structPct = s.structure ? s.structure.overallQuality : 0;
-  const klarmanScorecard = computeKlarmanScorecard(s);
-  const klarTotal = klarmanScorecard.total;
-  const klarMax = klarmanScorecard.maxPossible;
-  // Conviction tier = weighted blend of setup + struct + klar + rr
-  const klarContribution = (klarTotal / 20) * 40;
-  const convTotal = Math.round(Math.min(100, structPct * 0.4 + klarContribution + Math.min(15, s.rr2 * 2.5) + (s.followThrough === true ? 5 : 0)));
-  const tier = convTotal >= 85 ? "T1" : convTotal >= 70 ? "T2" : convTotal >= 55 ? "T3" : "T4";
-  const stars = convTotal >= 85 ? "★★★" : convTotal >= 70 ? "★★" : convTotal >= 55 ? "★" : "";
+  const klarTotal = conv.klarmanScore;
+  const klarMax = conv.klarmanMax;
+  const convTotal = conv.totalScore;
+  const convTier = conv.tier;
+  const stars = conv.stars;
   const tierColor = convTotal >= 85 ? "#a3be8c" : convTotal >= 70 ? "#88c0d0" : convTotal >= 55 ? "#ebcb8b" : "#bf616a";
   const structColor = structPct >= 70 ? "#a3be8c" : structPct >= 40 ? "#ebcb8b" : "#bf616a";
+
   card.innerHTML = `
     <header class="sig-head">
       <div>
         <h3>${esc(s.ticker)} <small>${esc(s.name)}</small></h3>
         <div class="sig-meta" style="font-weight: 500;">
-          <span style="color: ${tierColor};">Setup <b>${setupPct}</b> · Struktura <b style="color: ${structColor};">${structPct}</b> · Klar <b>${klarTotal}/${klarMax}</b> · ${tier} ${stars}</span>
+          ${tierBadge(s.tier)}
+          <span style="color: ${tierColor};">Setup <b>${setupPct}</b> · Struktura <b style="color: ${structColor};">${structPct}</b> · Klar <b>${klarTotal}/${klarMax}</b> · ${convTier} ${stars}</span>
         </div>
         <div class="sig-meta">
           ${esc(s.sector || "—")} ·
           Score <b>${s.setupScore}/100</b> ·
-          Spring ${esc(s.springDate)} (${s.barsSinceSpring}d temu) ·
+          ${s.tier === 'lps'
+            ? `LPS $${s.lpsLow.toFixed(2)} (${s.lpsBarsSince}d temu, vol ${s.lpsVolumeRatio.toFixed(2)}×) · bounce +${s.bouncePct.toFixed(1)}%`
+            : s.tier === 'confirmed'
+            ? `Spring ${s.barsSinceSpring}d temu · bounce +${s.bouncePct.toFixed(1)}%`
+            : `Spring ${esc(s.springDate)} (${s.barsSinceSpring}d temu)`} ·
           ${ftBadge(s.followThrough)}
         </div>
       </div>
@@ -1444,10 +1549,11 @@ function csvEscape(v) {
 }
 function exportCsv() {
   if (!currentSignals.length) return;
-  const cols = ["ticker", "scanDate", "price", "pctChange1d", "volume",
+  const cols = ["ticker", "tier", "scanDate", "price", "pctChange1d", "volume",
     "volChangeVsAvg30Pct", "entry", "sl", "tp1", "tp2", "rr1", "rr2",
     "shares", "positionValueUsd", "capitalAtRiskUsd", "riskPctOfNav", "setupScore",
-    "springDate", "springLow", "penetrationPct", "followThrough",
+    "springDate", "springLow", "penetrationPct", "followThrough", "bouncePct",
+    "lpsDate", "lpsLow",
     "trSupport", "trResistance", "trHeightPct"];
   const header = cols.join(",");
   const rows = currentSignals.map(s => cols.map(c => csvEscape(s[c])).join(","));
@@ -1474,6 +1580,7 @@ function saveReport() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+
 // ===========================================================================
 //  MAIN SCAN
 // ===========================================================================
@@ -1485,7 +1592,6 @@ async function runScan() {
   $("signals").innerHTML = "";
   $("log").innerHTML = "";
   $("config-msg").innerHTML = "";
-  // Remove any leftover guidance banner from a prior scan
   $("progress-panel").querySelectorAll(".callout.warn").forEach(n => n.remove());
 
   const cfg = {
@@ -1513,16 +1619,15 @@ async function runScan() {
   $("signals-title").textContent = "Sygnały Wyckoff Spring (skanowanie…)";
   $("scan-summary").textContent = "";
 
-  log(`Start. Uniwersum: ${universe.length} tickerów. Źródło: ${cfg.source}. NAV $${cfg.navUsd.toLocaleString()}, pozycja $${cfg.positionUsd.toLocaleString()}, min R:R ${cfg.minRr}, min score ${cfg.minScore}.`, "ok");
+  log(`Start. Uniwersum: ${universe.length} tickerów. Źródło: ${cfg.source}. NAV $${cfg.navUsd.toLocaleString()}, pozycja $${cfg.positionUsd.toLocaleString()}, min R:R ${cfg.minRr} (LPS auto 50%, CONFIRMED 70%), min score ${cfg.minScore}.`, "ok");
 
-  // Concurrency & rate-limit tuned per source
   let limiter;
   if (cfg.source === "twelvedata") {
-    limiter = new Limiter(1, 8000); // free tier: 8 req/min
+    limiter = new Limiter(1, 8000);
   } else if (cfg.source === "stooq") {
-    limiter = new Limiter(5, 120);  // 5 parallel, gentle pacing
+    limiter = new Limiter(5, 120);
   } else {
-    limiter = new Limiter(8, 0);    // CSV cache: full speed
+    limiter = new Limiter(8, 0);
   }
 
   const startMs = Date.now();
@@ -1542,13 +1647,13 @@ async function runScan() {
           try { sig.story = await fetchStory(ticker, cfg.finKey); }
           catch (e) { /* keep story null */ }
         }
-        sig._bars = bars;  // keep raw OHLC for PDF chart generation
+        sig._bars = bars;
         currentSignals.push(sig);
         renderSignal(sig);
         notify(sig);
         const journaled = addToJournal(sig);
         found++;
-        log(`✓ ${ticker}  RR2 ${sig.rr2.toFixed(2)}  score ${sig.setupScore}  $${sig.price.toFixed(2)}${journaled ? "  → dziennik" : "  (już w dzienniku)"}`, "ok");
+        log(`✓ ${ticker} [${sig.tier.toUpperCase()}]  RR2 ${sig.rr2.toFixed(2)}  score ${sig.setupScore}  $${sig.price.toFixed(2)}${journaled ? "  → dziennik" : "  (już w dzienniku)"}`, "ok");
       }
     } catch (e) {
       errors++;
@@ -1562,18 +1667,25 @@ async function runScan() {
 
   await Promise.all(tasks);
 
-  // Sort signals: best score, then best R:R
-  currentSignals.sort((a, b) =>
-    b.setupScore !== a.setupScore ? b.setupScore - a.setupScore : b.rr2 - a.rr2);
+  // Sort: tier preference (LPS > CONFIRMED > FRESH), then setup score, then R:R
+  const tierOrder = { lps: 0, confirmed: 1, fresh: 2 };
+  currentSignals.sort((a, b) => {
+    const ta = tierOrder[a.tier] ?? 99;
+    const tb = tierOrder[b.tier] ?? 99;
+    if (ta !== tb) return ta - tb;
+    if (b.setupScore !== a.setupScore) return b.setupScore - a.setupScore;
+    return b.rr2 - a.rr2;
+  });
   $("signals").innerHTML = "";
   currentSignals.forEach(renderSignal);
 
   const dt = Math.floor((Date.now() - startMs) / 1000);
+  const tierCounts = currentSignals.reduce((acc, s) => { acc[s.tier] = (acc[s.tier] || 0) + 1; return acc; }, {});
+  const tierSummary = ['lps', 'confirmed', 'fresh'].map(t => `${t.toUpperCase()}: ${tierCounts[t] || 0}`).join(" · ");
   $("signals-title").textContent = `Sygnały Wyckoff Spring — ${currentSignals.length}`;
-  $("scan-summary").textContent = `${universe.length} przeskanowanych, ${errors} bez danych · ${dt} sek`;
-  log(`Zakończono w ${dt} sek. ${currentSignals.length} sygnałów. ${errors} błędów / brak danych.`, "ok");
+  $("scan-summary").textContent = `${universe.length} przeskanowanych · ${tierSummary} · ${errors} bez danych · ${dt} sek`;
+  log(`Zakończono w ${dt} sek. ${currentSignals.length} sygnałów (${tierSummary}). ${errors} błędów / brak danych.`, "ok");
 
-  // If most tickers failed, show actionable guidance.
   const errRate = universe.length > 0 ? errors / universe.length : 0;
   if (errRate > 0.5) {
     const tip = document.createElement("div");
@@ -1603,9 +1715,8 @@ async function runScan() {
   $("save-btn").disabled = currentSignals.length === 0;
   scanInProgress = false;
 
-  // Auto-scan scheduling: prefer specific time-of-day; fall back to interval.
   if (!aborted) {
-    const dailyTime = $("daily-time").value; // "HH:MM"
+    const dailyTime = $("daily-time").value;
     const rescanMin = parseInt($("rescan-min").value, 10) || 0;
     if (dailyTime && /^\d{1,2}:\d{2}$/.test(dailyTime)) {
       const [hh, mm] = dailyTime.split(":").map(Number);
@@ -1647,7 +1758,6 @@ function genId() {
     : "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
 }
 
-// Add a fresh signal to the journal; dedupe by (ticker, scanDate)
 function addToJournal(sig) {
   const journal = loadJournal();
   if (journal.some(j => j.ticker === sig.ticker && j.scanDate === sig.scanDate)) return false;
@@ -1661,8 +1771,14 @@ function addToJournal(sig) {
     shares: sig.shares,
     setupScore: sig.setupScore,
     springDate: sig.springDate,
+    springLow: sig.springLow,
     trSupport: sig.trSupport, trResistance: sig.trResistance,
     catalysts: (sig.story && sig.story.catalysts) ? [...sig.story.catalysts] : [],
+    // Tier metadata for per-tier win rate analysis
+    tier: sig.tier || 'fresh',
+    bouncePct: sig.bouncePct,
+    lpsDate: sig.lpsDate,
+    lpsLow: sig.lpsLow,
     outcomes: { d5: null, d10: null, d21: null },
   });
   persistJournal(journal);
@@ -1676,59 +1792,6 @@ function updateJournalCount() {
 }
 
 // --- Outcome evaluation ---------------------------------------------------
-// Walk forward through post-signal bars and classify the outcome.
-// Conservative: if same bar touches both SL and TP, count as stopped.
-function loadJournal() {
-  try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || "[]"); }
-  catch (e) { return []; }
-}
-function persistJournal(arr) {
-  try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(arr)); return true; }
-  catch (e) {
-    setJournalStatus(`Zapis dziennika nie powiódł się: ${e.message}`, "err");
-    return false;
-  }
-}
-function setJournalStatus(msg, cls) {
-  const el = $("journal-status");
-  if (el) { el.textContent = msg; el.style.color = cls === "err" ? "#bf616a" : "#a8b5c8"; }
-}
-function genId() {
-  return (crypto && crypto.randomUUID) ? crypto.randomUUID()
-    : "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
-}
-
-// Add a fresh signal to the journal; dedupe by (ticker, scanDate)
-function addToJournal(sig) {
-  const journal = loadJournal();
-  if (journal.some(j => j.ticker === sig.ticker && j.scanDate === sig.scanDate)) return false;
-  journal.push({
-    id: genId(),
-    ticker: sig.ticker,
-    scanDate: sig.scanDate,
-    addedAt: new Date().toISOString(),
-    entry: sig.entry, sl: sig.sl, tp1: sig.tp1, tp2: sig.tp2,
-    rr1: sig.rr1, rr2: sig.rr2,
-    shares: sig.shares,
-    setupScore: sig.setupScore,
-    springDate: sig.springDate,
-    trSupport: sig.trSupport, trResistance: sig.trResistance,
-    catalysts: (sig.story && sig.story.catalysts) ? [...sig.story.catalysts] : [],
-    outcomes: { d5: null, d10: null, d21: null },
-  });
-  persistJournal(journal);
-  updateJournalCount();
-  return true;
-}
-
-function updateJournalCount() {
-  const el = $("journal-count");
-  if (el) el.textContent = String(loadJournal().length);
-}
-
-// --- Outcome evaluation ---------------------------------------------------
-// Walk forward through post-signal bars and classify the outcome.
-// Conservative: if same bar touches both SL and TP, count as stopped.
 function classifyOutcome(barsAfter, sl, tp1, tp2) {
   let result = "open";
   let resultDay = barsAfter.length;
@@ -1744,9 +1807,7 @@ function classifyOutcome(barsAfter, sl, tp1, tp2) {
   return { result, resultDay };
 }
 
-// Wyckoff Spring integrity check — beyond simple SL/TP, evaluates whether
-// the Wyckoff structural assumptions still hold (Spring low intact, higher
-// lows forming, SOS reached) or whether the formation has been invalidated.
+// Wyckoff Spring integrity check
 function checkSetupIntegrity(entry, bars) {
   if (!bars || bars.length === 0) return null;
   let scanIdx = bars.findIndex(b => b.date === entry.scanDate);
@@ -1807,10 +1868,9 @@ function checkSetupIntegrity(entry, bars) {
     status = "sos_active";
     reasons.push(`SOS confirmed — close > TR resistance $${trResistance.toFixed(2)} w d${sosDay} (Phase D rozpoczęta)`);
   } else {
-    // No decisive action yet — check warning signs
     const distToSL = (lastBar.close - entry.sl) / Math.max(0.01, entry.entry - entry.sl);
     const distToSpringLow = (lastBar.close - springLow) / Math.max(0.01, entry.entry - springLow);
-    const lowsHigher = lowestLow > springLow * 1.005;  // 0.5% buffer
+    const lowsHigher = lowestLow > springLow * 1.005;
 
     if (distToSL < 0.20) {
       status = "warning_sl";
@@ -1849,7 +1909,6 @@ async function evaluateEntry(entry, fetcher) {
   catch (e) { return { error: e.message }; }
   if (!bars || bars.length === 0) return { error: "brak danych" };
 
-  // Find scanDate index, or the closest preceding bar
   let scanIdx = bars.findIndex(b => b.date === entry.scanDate);
   if (scanIdx < 0) {
     for (let i = 0; i < bars.length; i++) {
@@ -1886,7 +1945,6 @@ async function evaluateEntry(entry, fetcher) {
       evaluatedAt: new Date().toISOString(),
     };
   }
-  // Wyckoff Spring integrity (independent of d5/d10/d21 windows)
   const integrity = checkSetupIntegrity(entry, bars);
   return { outcomes: out, integrity };
 }
@@ -1902,7 +1960,6 @@ async function reEvaluateAll() {
                 : source === "csv"        ? fetchFromCsv
                 : fetchStooq;
 
-  // Skip entries where ALL horizons are already final (stopped or won, full bars)
   const needsUpdate = journal.filter(e => {
     return ["d5", "d10", "d21"].some(h => {
       const o = e.outcomes[h];
@@ -2067,11 +2124,10 @@ function renderJournalTable(journal) {
 
   if (entries.length === 0) {
     $("journal-table").innerHTML =
-      `<tr><td colspan="10" style="text-align: center; padding: 30px;" class="muted">Brak wpisów spełniających filtr.</td></tr>`;
+      `<tr><td colspan="11" style="text-align: center; padding: 30px;" class="muted">Brak wpisów spełniających filtr.</td></tr>`;
     return;
   }
 
-  // Integrity status badge → colored, with tooltip showing reasons
   function integrityBadge(e) {
     const it = e.integrity;
     if (!it) return '<span class="muted" title="brak weryfikacji">— niesprawdzone</span>';
@@ -2094,6 +2150,13 @@ function renderJournalTable(journal) {
     return `<span style="color: ${color}; font-weight: 500;" title="${esc(tooltip)}">${label}</span>`;
   }
 
+  function tierCell(t) {
+    if (t === 'lps')       return '<span style="color:#a3be8c; font-weight:600;">LPS</span>';
+    if (t === 'confirmed') return '<span style="color:#88c0d0; font-weight:600;">CONFIRMED</span>';
+    if (t === 'fresh')     return '<span style="color:#ebcb8b; font-weight:600;">FRESH</span>';
+    return '<span class="muted">—</span>';
+  }
+
   const rows = entries.map(e => {
     const o = e.outcomes[horizon];
     let outcomeCell = '<span class="outcome-pending">brak oceny</span>';
@@ -2109,6 +2172,7 @@ function renderJournalTable(journal) {
     const rCell = o ? `${o.rMultiple >= 0 ? '+' : ''}${o.rMultiple.toFixed(2)}R` : "—";
     return `<tr>
       <td><b>${esc(e.ticker)}</b></td>
+      <td>${tierCell(e.tier)}</td>
       <td>${esc(e.scanDate)}</td>
       <td>${e.setupScore}</td>
       <td>$${e.entry.toFixed(2)}</td>
@@ -2123,7 +2187,7 @@ function renderJournalTable(journal) {
 
   $("journal-table").innerHTML = `
     <thead><tr>
-      <th>Ticker</th><th>Data sygnału</th><th>Score</th>
+      <th>Ticker</th><th>Tier</th><th>Data sygnału</th><th>Score</th>
       <th>Entry</th><th>SL</th><th>R:R2</th>
       <th>Wynik</th><th>Zwrot</th><th>R multiple</th>
       <th>Status formacji</th>
@@ -2205,14 +2269,10 @@ function switchTab(name) {
   if (name === "journal") renderJournal();
 }
 
+
 // ===========================================================================
 //  PDF — Klarman compliance + actual chart + theoretical reference
 // ===========================================================================
-
-// Seth Klarman 10-rule scorecard. Each rule scored 0-2 pts (max 20).
-// Uses Finnhub fundamentals (P/E, P/B, D/E, 52w high/low, beta) when available;
-// rules that can't be evaluated without metrics return null and are excluded
-// from the max-possible denominator.
 const KLARMAN_SCORECARD_META = [
   { n: 1,  name: "Ochrona kapitału",        q: "Czy ryzyko bankructwa lub trwałej utraty wartości jest bliskie zeru?" },
   { n: 2,  name: "Margines bezpieczeństwa", q: "Czy cena akcji jest co najmniej 30-50% poniżej konserwatywnej wartości wewnętrznej?" },
@@ -2231,7 +2291,6 @@ function computeKlarmanScorecard(s) {
   const story = s.story || null;
   const p = s.price;
   function gm(k) { return m && m[k] != null ? Number(m[k]) : null; }
-  // Diagnostic prefix when no metrics — helps user understand what's missing
   const noMetricsReason = !story            ? "klucz Finnhub nie wpisany lub błąd sieci"
                        : !story.metrics      ? "Finnhub /stock/metric zwrócił NULL (sprawdź F12 Console)"
                        :                       "specyficzne pole niedostępne dla tego tickera";
@@ -2247,8 +2306,7 @@ function computeKlarmanScorecard(s) {
 
   const rules = [];
 
-  // 1. Ochrona kapitału — bilans + płynność
-  let s1 = null, n1 = "Brak danych — ${noMetricsReason}";
+  let s1 = null, n1 = `Brak danych — ${noMetricsReason}`;
   if (de != null && cr != null) {
     if (de < 0.5 && cr > 2)        { s1 = 2; n1 = `D/E ${de.toFixed(2)}, current ratio ${cr.toFixed(2)} — silny bilans, niskie ryzyko bankructwa`; }
     else if (de < 1.0 && cr > 1.5) { s1 = 2; n1 = `D/E ${de.toFixed(2)}, CR ${cr.toFixed(2)} — bezpieczny bilans`; }
@@ -2257,7 +2315,6 @@ function computeKlarmanScorecard(s) {
   }
   rules.push({ ...KLARMAN_SCORECARD_META[0], score: s1, note: n1 });
 
-  // 2. Margines bezpieczeństwa — P/B, P/E, dystans od 52w high
   let s2 = null, n2 = "Brak P/B i P/E";
   if (pb != null || pe != null) {
     const dh = h52 ? ((h52 - p) / h52 * 100) : 0;
@@ -2267,7 +2324,6 @@ function computeKlarmanScorecard(s) {
   }
   rules.push({ ...KLARMAN_SCORECARD_META[1], score: s2, note: n2 });
 
-  // 3. Konserwatywna wycena — P/B (wycena vs book value)
   let s3 = null, n3 = "Brak P/B";
   if (pb != null) {
     if (pb < 1.2)      { s3 = 2; n3 = `P/B ${pb.toFixed(2)} — wycena oparta o twarde aktywa (book value)`; }
@@ -2276,7 +2332,6 @@ function computeKlarmanScorecard(s) {
   }
   rules.push({ ...KLARMAN_SCORECARD_META[2], score: s3, note: n3 });
 
-  // 4. Podejście przekorne — daleko od 52w high + niski sentyment analityków
   let s4 = null, n4 = "Brak danych 52w high / analityków";
   if (h52 != null || analystBuyPct != null) {
     const dh = h52 ? ((h52 - p) / h52 * 100) : 0;
@@ -2291,7 +2346,6 @@ function computeKlarmanScorecard(s) {
   }
   rules.push({ ...KLARMAN_SCORECARD_META[3], score: s4, note: n4 });
 
-  // 5. Analiza Bottom-Up — D/E, current ratio (powtórzenie quality of balance sheet)
   let s5 = null, n5 = "Brak danych bilansowych";
   if (de != null && cr != null) {
     if (de < 0.5 && cr > 2)       { s5 = 2; n5 = `Silny bilans (D/E ${de.toFixed(2)}, CR ${cr.toFixed(2)}), biznes resilient`; }
@@ -2300,10 +2354,9 @@ function computeKlarmanScorecard(s) {
   }
   rules.push({ ...KLARMAN_SCORECARD_META[4], score: s5, note: n5 });
 
-  // 6. Katalizator wartości — Wyckoff Spring + Finnhub catalysts
   let s6 = 0, n6 = "";
   const cats = (story && story.catalysts) || [];
-  let catCount = 1; // Wyckoff Spring zawsze liczy jako katalizator price-action
+  let catCount = 1;
   if (cats.includes('insider buying')) catCount++;
   if (cats.includes('earnings beat'))  catCount++;
   if (cats.includes('analyst upgrade')) catCount++;
@@ -2315,7 +2368,6 @@ function computeKlarmanScorecard(s) {
   n6 = `Wyckoff Spring + ${cats.length} catalyst: ${cats.join(', ') || 'brak fundamentalnych'}${s.followThrough === true ? ', FT ✓' : ''}`;
   rules.push({ ...KLARMAN_SCORECARD_META[5], score: s6, note: n6 });
 
-  // 7. Brak ulegania modzie — P/E, beta
   let s7 = null, n7 = "Brak P/E";
   if (pe != null) {
     if (pe > 0 && pe < 15 && (beta == null || beta < 1.2))      { s7 = 2; n7 = `P/E ${pe.toFixed(1)}${beta != null ? ', beta ' + beta.toFixed(2) : ''} — wartościowa, nie spekulacyjna`; }
@@ -2324,7 +2376,6 @@ function computeKlarmanScorecard(s) {
   }
   rules.push({ ...KLARMAN_SCORECARD_META[6], score: s7, note: n7 });
 
-  // 8. Realistyczne prognozy — earnings surprise jako proxy zdrowia biznesu
   let s8 = null, n8 = "Brak danych earnings";
   if (story && story.lastSurprisePct != null) {
     if (story.lastSurprisePct > 5)      { s8 = 2; n8 = `Earnings surprise +${story.lastSurprisePct.toFixed(1)}% — biznes realny, dostarcza wyniki`; }
@@ -2333,7 +2384,6 @@ function computeKlarmanScorecard(s) {
   }
   rules.push({ ...KLARMAN_SCORECARD_META[7], score: s8, note: n8 });
 
-  // 9. Cierpliwość cenowa — dystans od 52w low (im bliżej dolka, tym lepiej)
   let s9 = null, n9 = "Brak danych 52w low";
   if (l52 != null) {
     const dl = ((p - l52) / l52) * 100;
@@ -2343,11 +2393,9 @@ function computeKlarmanScorecard(s) {
   }
   rules.push({ ...KLARMAN_SCORECARD_META[8], score: s9, note: n9 });
 
-  // 10. Jasna strategia wyjścia — TP1/TP2 zawsze zdefiniowane przez Wyckoff measured-move
   rules.push({ ...KLARMAN_SCORECARD_META[9], score: 2,
                note: `TP1 $${s.tp1} (TR top), TP2 $${s.tp2} (measured move), R:R do TP2 = ${s.rr2.toFixed(2)}:1` });
 
-  // Aggregate
   const scoredRules = rules.filter(r => r.score !== null);
   const total = scoredRules.reduce((a, r) => a + r.score, 0);
   const maxPossible = scoredRules.length * 2;
@@ -2358,7 +2406,6 @@ function computeKlarmanScorecard(s) {
   return { rules, total, maxPossible, interpretation };
 }
 
-// Legacy compatibility wrapper for any old `KLARMAN_RULES.filter(r => r.test(s))` references.
 const KLARMAN_RULES = KLARMAN_SCORECARD_META.map(meta => ({
   name: meta.name,
   test: s => {
@@ -2383,15 +2430,18 @@ function daysBetween(d1, d2) {
   return Math.round(Math.abs(b - a) / 86400000);
 }
 
-// Compute conviction tier from structure quality + Klarman + R:R + confirmation
 function computeConviction(s) {
   let score = 0;
-  if (s.structure) score += s.structure.overallQuality * 0.40;          // 0-40
+  if (s.structure) score += s.structure.overallQuality * 0.40;
   const sc = computeKlarmanScorecard(s);
-  // Klarman 0-20 → 0-40 contribution to conviction
-  score += (sc.total / Math.max(1, sc.maxPossible)) * 40;               // 0-40
-  score += Math.min(15, s.rr2 * 2.5);                                   // 0-15
+  score += (sc.total / Math.max(1, sc.maxPossible)) * 40;
+  score += Math.min(15, s.rr2 * 2.5);
   if (s.followThrough === true) score += 5;
+
+  // Tier bonus: LPS = textbook, CONFIRMED = potwierdzony
+  if (s.tier === 'lps')        score += 10;
+  else if (s.tier === 'confirmed') score += 5;
+
   score = Math.round(Math.min(100, score));
 
   let tier, stars, conviction;
@@ -2403,12 +2453,10 @@ function computeConviction(s) {
   return { tier, stars, conviction, totalScore: score, klarmanScore: sc.total, klarmanMax: sc.maxPossible };
 }
 
-// Phase-by-phase Polish narrative
 function generateWyckoffNarrative(s) {
   const st = s.structure || {};
   const n = {};
 
-  // Kontekst
   const stage = st.sos ? "Phase D (Markup rozpoczety)"
               : s.followThrough === true ? "Phase C (Spring potwierdzony, czeka SOS)"
               : "Phase C (Spring detected, pre-confirmation)";
@@ -2416,7 +2464,6 @@ function generateWyckoffNarrative(s) {
     `Trading Range $${s.trSupport.toFixed(2)} - $${s.trResistance.toFixed(2)} (${s.trHeightPct.toFixed(1)}%). ` +
     `Wykryto ${st.foundCount || 0} z 7 elementow struktury, jakosc ${st.overallQuality || 0}/100.`;
 
-  // Phase A — Stop downtrend
   if (st.sc) {
     let p = `Phase A (Stop downtrend) ${formatPlDate(st.sc.date)}: `;
     p += `Selling Climax na vol ${st.sc.volRatio.toFixed(2)}x sredniej miesiecznej, `;
@@ -2436,7 +2483,6 @@ function generateWyckoffNarrative(s) {
     n.phaseA = "Phase A: Brak wyraznego Selling Climax w historii. Nietypowa akumulacja lub SC poza window 200 sesji.";
   }
 
-  // Phase B — Building cause (consolidation)
   let pb = "Phase B (Building cause / Konsolidacja)";
   if (st.sc && s.springDate) {
     const monthsB = Math.round(daysBetween(st.sc.date, s.springDate) / 30);
@@ -2448,7 +2494,6 @@ function generateWyckoffNarrative(s) {
   pb += `(podaz absorbowana przez kupujacych, dystrybucja kontrolowana).`;
   n.phaseB = pb;
 
-  // Phase C — Spring / Test
   let pc = `Phase C (Spring) ${formatPlDate(s.springDate)}: `;
   pc += `Cena spada -${s.penetrationPct.toFixed(2)}% pod TR support, low $${s.springLow.toFixed(2)}, `;
   pc += `na vol ${s.springVolumeRatio.toFixed(2)}x sredniej 30-dniowej. `;
@@ -2459,7 +2504,6 @@ function generateWyckoffNarrative(s) {
   pc += `Follow-through: ${s.followThrough === true ? 'POTWIERDZONE (kolejna sesja zamkneła wyzej)' : s.followThrough === false ? 'BRAK (sygnał slabszy)' : 'PENDING (Spring dzisiaj)'}.`;
   n.phaseC = pc;
 
-  // Phase D — Markup begin (LPS, SOS)
   let pd = "Phase D (Markup begin): ";
   let pdParts = [];
   if (st.lps) {
@@ -2475,7 +2519,6 @@ function generateWyckoffNarrative(s) {
   else pd += `Phase D jeszcze nie rozpoczeta — czekamy na SOS (wybicie i close ponad TR $${s.trResistance.toFixed(2)}) jako finalne potwierdzenie kontynuacji. Entry $${s.entry.toFixed(2)} ${s.entry > s.trResistance ? 'JUZ ponad TR (post-breakout entry)' : 'ponizej TR top (pre-breakout entry)'}.`;
   n.phaseD = pd;
 
-  // Phase E — Markup continuation
   const tp1Move = ((s.tp1 - s.entry) / s.entry * 100);
   const tp2Move = ((s.tp2 - s.entry) / s.entry * 100);
   const slMove = ((s.sl - s.entry) / s.entry * 100);
@@ -2489,11 +2532,7 @@ function generateWyckoffNarrative(s) {
 }
 
 // ---- Polish font support for PDF ----
-// jsPDF default Helvetica doesn't include Polish diacritics. We fetch Roboto
-// (Latin Extended subset) from CDN once and register it with jsPDF. If the
-// CDN is unreachable (corporate firewall) we fall back to transliterating
-// ąćęłńóśźż → acelnoszz so text is at least readable.
-let _pdfFontCache = null; // null=untested, false=failed, {reg, bold}=loaded
+let _pdfFontCache = null;
 const _PL_TRANS = { 'ą':'a','Ą':'A','ć':'c','Ć':'C','ę':'e','Ę':'E','ł':'l','Ł':'L','ń':'n','Ń':'N','ó':'o','Ó':'O','ś':'s','Ś':'S','ź':'z','Ź':'Z','ż':'z','Ż':'Z' };
 function plToAscii(s) {
   if (typeof s !== 'string') return s;
@@ -2515,8 +2554,6 @@ async function _fetchTtfAsBase64(url) {
 
 async function loadPdfPolishFonts() {
   if (_pdfFontCache !== null) return _pdfFontCache;
-  // Multiple TTF sources — first one that downloads wins.
-  // Note: @fontsource v4/v5 only ships WOFF (no TTF), so we use google/fonts repo.
   const candidates = [
     { reg:  'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/static/Roboto-Regular.ttf',
       bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/static/Roboto-Bold.ttf' },
@@ -2529,7 +2566,7 @@ async function loadPdfPolishFonts() {
     try {
       const [reg, bold] = await Promise.all([_fetchTtfAsBase64(c.reg), _fetchTtfAsBase64(c.bold)]);
       _pdfFontCache = { reg, bold, source: c.reg };
-      console.log('PDF: Polish font loaded from', c.reg, '— sizes', reg.length, '/', bold.length, 'b64 chars');
+      console.log('PDF: Polish font loaded from', c.reg);
       return _pdfFontCache;
     } catch (e) {
       console.warn('PDF font candidate failed:', c.reg, '—', e.message);
@@ -2540,8 +2577,6 @@ async function loadPdfPolishFonts() {
   return false;
 }
 
-// Install transliteration wrapper on doc (ą→a, ć→c, etc.) — used as fallback
-// when Polish TTF can't be registered or causes Unicode rendering errors.
 function installAsciiTransliteration(doc) {
   const origText = doc.text.bind(doc);
   doc.text = function(text, x, y, opts) {
@@ -2558,7 +2593,6 @@ function installAsciiTransliteration(doc) {
   };
 }
 
-// Sticky flag — once Polish font fails to render, skip it for subsequent PDFs
 let _polishFontRenderFailed = false;
 
 async function applyPolishFont(doc) {
@@ -2595,10 +2629,6 @@ async function generatePdf(signal) {
     return;
   }
   const { jsPDF } = window.jspdf;
-  // Two attempts: (1) Polish font with Identity-H, (2) ASCII transliteration.
-  // jsPDF's Identity-H encoding can fail at RENDER time (not addFont time)
-  // when the font's Unicode tables are malformed — so we wrap each whole
-  // attempt and retry from a fresh document if needed.
   let lastError = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     const doc = new jsPDF('portrait', 'mm', 'a4');
@@ -2606,7 +2636,7 @@ async function generatePdf(signal) {
       if (attempt === 0) {
         await applyPolishFont(doc);
       } else {
-        console.warn('PDF: ponawiam z transliteracją ASCII (Polish font Identity-H zawiódł)');
+        console.warn('PDF: ponawiam z transliteracją ASCII');
         installAsciiTransliteration(doc);
       }
       drawPdfHeader(doc, signal);
@@ -2620,14 +2650,12 @@ async function generatePdf(signal) {
         drawStructureAnalysis(doc, signal);
       }
       doc.save(`wyckoff_${signal.ticker}_${signal.scanDate}.pdf`);
-      if (attempt === 0) console.log('PDF: zapisane z polską czcionką');
-      else                console.log('PDF: zapisane z transliteracją ASCII (Polish font nie działa)');
       return;
     } catch (e) {
       lastError = e;
       console.warn(`PDF próba ${attempt + 1} nie powiodła się:`, e.message);
       if (attempt === 0) {
-        _polishFontRenderFailed = true;   // remember — skip font next time
+        _polishFontRenderFailed = true;
       }
     }
   }
@@ -2646,7 +2674,6 @@ function drawStructureAnalysis(doc, s) {
   doc.setTextColor(80);
   doc.text(`Wykryte ${st.foundCount} z 7 elementow.  Ogolna jakosc struktury: ${st.overallQuality}/100.`, 10, 21);
 
-  // Overall quality summary box
   const sumY = 26;
   const sumBg = st.overallQuality >= 70 ? [232, 246, 232] : st.overallQuality >= 50 ? [253, 247, 218] : [250, 232, 232];
   doc.setFillColor(sumBg[0], sumBg[1], sumBg[2]);
@@ -2668,7 +2695,6 @@ function drawStructureAnalysis(doc, s) {
             :                          "Slaba struktura — wielu elementow brak. Spring moze byc przedwczesny.";
   doc.text(rec, 100, sumY + 7);
 
-  // Element-by-element table
   let y = sumY + 22;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -2683,7 +2709,6 @@ function drawStructureAnalysis(doc, s) {
       doc.rect(10, y - 5, 190, rowH, 'F');
     }
 
-    // Status circle
     if (el.found) {
       doc.setFillColor(0, 150, 0);
       doc.circle(15, y - 1, 2.5, 'F');
@@ -2700,13 +2725,11 @@ function drawStructureAnalysis(doc, s) {
       doc.text('--', 12.5, y + 0.5);
     }
 
-    // Code + name
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20);
     doc.text(`${el.code} — ${el.name}`, 22, y);
 
-    // Quality bar (right side)
     const qBarX = 130, qBarW = 50, qBarH = 4;
     doc.setFillColor(230);
     doc.rect(qBarX, y - 3, qBarW, qBarH, 'F');
@@ -2719,13 +2742,11 @@ function drawStructureAnalysis(doc, s) {
     doc.setTextColor(40);
     doc.text(`${Math.round(el.quality)}/100`, qBarX + qBarW + 3, y + 0.5);
 
-    // Detail line
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(90);
     doc.text(el.detail, 22, y + 5);
 
-    // Weight tag
     doc.setFontSize(6);
     doc.setTextColor(140);
     doc.text(`waga ${el.weight}%`, 22, y + 9);
@@ -2733,7 +2754,6 @@ function drawStructureAnalysis(doc, s) {
     y += rowH;
   });
 
-  // Narracja faz Wyckoffa
   y += 4;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -2752,7 +2772,6 @@ function drawStructureAnalysis(doc, s) {
   ];
 
   doc.setFontSize(8);
-  // Simple word-wrap helper using jsPDF splitTextToSize
   phases.forEach(p => {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(p.color[0], p.color[1], p.color[2]);
@@ -2764,7 +2783,6 @@ function drawStructureAnalysis(doc, s) {
     y += Math.max(4, lines.length * 3.5) + 1.5;
   });
 
-  // Final takeaway box
   y += 2;
   const conv = computeConviction(s);
   const takeBg = conv.tier === 'T1' ? [232, 246, 232]
@@ -2793,7 +2811,6 @@ function drawPdfHeader(doc, s) {
   const wyckPct = s.structure ? s.structure.overallQuality : s.setupScore;
   const klarStr = `${conv.klarmanScore}/${conv.klarmanMax}`;
 
-  // Big ticker line, then conviction badges (Wyck X% · Klar X/20 · TN star)
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 60, 100);
@@ -2802,7 +2819,7 @@ function drawPdfHeader(doc, s) {
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(80);
-  const headerLine = `Wyck ${wyckPct}%  ·  Klar ${klarStr}  ·  ${conv.tier} ${conv.stars}  ·  ${conv.conviction}`;
+  const headerLine = `${(s.tier || '').toUpperCase()}  ·  Wyck ${wyckPct}%  ·  Klar ${klarStr}  ·  ${conv.tier} ${conv.stars}  ·  ${conv.conviction}`;
   doc.text(headerLine, 32, 18);
 
   doc.setFontSize(9);
@@ -2811,7 +2828,6 @@ function drawPdfHeader(doc, s) {
   doc.text(`Scan: ${s.scanDate}  ·  Setup score: ${s.setupScore}/100  ·  Total conviction: ${conv.totalScore}/100`, 10, 24);
   doc.text(`Generated: ${new Date().toLocaleString('en-US')}`, 10, 28);
 
-  // Trade summary box
   const boxY = 33;
   doc.setFillColor(245, 248, 252);
   doc.rect(10, boxY, 190, 22, 'F');
@@ -2864,51 +2880,45 @@ function drawKlarmanCompliance(doc, s) {
       doc.setFillColor(248, 250, 252);
       doc.rect(10, y - 4, 190, rowH, 'F');
     }
-    // Score badge
     const sVal = rule.score;
     const badge = sVal === 2 ? [0, 150, 0]
                 : sVal === 1 ? [220, 170, 0]
                 : sVal === 0 ? [200, 30, 30]
                 :              [160, 160, 160];
-    doc.setFillColor(...badge);
+    doc.setFillColor(badge[0], badge[1], badge[2]);
     doc.circle(15, y, 2.6, 'F');
     doc.setTextColor(255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.text(sVal === null ? '-' : String(sVal), sVal === null ? 14 : 13.6, y + 1.1);
 
-    // Rule number + name
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20);
     doc.text(`${rule.n}. ${rule.name}`, 22, y - 1);
 
-    // Question
     doc.setFontSize(7);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(110);
     const qLines = doc.splitTextToSize(rule.q, 140);
     doc.text(qLines[0] || '', 22, y + 2.5);
 
-    // Note (auto-evaluated)
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(50);
     const nLines = doc.splitTextToSize(rule.note || '', 165);
     doc.text(nLines[0] || '', 22, y + 6);
 
-    // Score label on the right
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...badge);
+    doc.setTextColor(badge[0], badge[1], badge[2]);
     doc.text(sVal === null ? '— / 2' : `${sVal} / 2`, 195, y, { align: 'right' });
 
     y += rowH;
   });
 
-  // Summary box
   y += 2;
-  doc.setFillColor(...sc.interpretation.bg);
+  doc.setFillColor(sc.interpretation.bg[0], sc.interpretation.bg[1], sc.interpretation.bg[2]);
   doc.rect(10, y - 5, 190, 14, 'F');
   doc.setDrawColor(180);
   doc.setLineWidth(0.2);
@@ -2916,7 +2926,7 @@ function drawKlarmanCompliance(doc, s) {
 
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...sc.interpretation.color);
+  doc.setTextColor(sc.interpretation.color[0], sc.interpretation.color[1], sc.interpretation.color[2]);
   doc.text(`SUMA: ${sc.total} / ${sc.maxPossible} pkt`, 14, y + 2);
 
   doc.setFontSize(10);
@@ -2964,8 +2974,6 @@ function drawActualChart(doc, s) {
   const xS = i => cL + (i / Math.max(1, last.length - 1)) * cW;
   const yS = p => cT + cH - ((p - pMin) / pRange) * cH;
 
-  // ----- Phase background zones (colored bands) -----
-  // Translate global indices to last-array indices.
   const fullLenLocal = bars.length;
   const lastOffsetLocal = fullLenLocal - last.length;
   function localIdx(g) { return Math.max(0, Math.min(last.length - 1, g - lastOffsetLocal)); }
@@ -2974,25 +2982,20 @@ function drawActualChart(doc, s) {
     const st = s.structure;
     const springIdxL = last.findIndex(b => b.date === s.springDate);
 
-    // Phase A: PS (or SC) → ST (or AR if no ST)
     let aStart = 0, aEnd = 0;
     if (st.sc) aStart = localIdx(st.sc.idx);
     if (st.ps) aStart = Math.min(aStart, localIdx(st.ps.idx));
     aEnd = aStart;
     if (st.ar) aEnd = Math.max(aEnd, localIdx(st.ar.idx));
     if (st.st) aEnd = Math.max(aEnd, localIdx(st.st.idx));
-    // Phase B: end of A → Spring - 1
     const bStart = aEnd;
     const bEnd = springIdxL > 0 ? springIdxL - 1 : last.length - 1;
-    // Phase C: Spring → LPS (or Spring +3 bars if no LPS yet)
     const cStart = springIdxL >= 0 ? springIdxL : last.length - 1;
     let cEnd = cStart + 3;
     if (st.lps) cEnd = localIdx(st.lps.idx);
     cEnd = Math.min(last.length - 1, cEnd);
-    // Phase D: LPS → SOS (or end)
     const dStart = cEnd;
     const dEnd = st.sos ? localIdx(st.sos.idx) : last.length - 1;
-    // Phase E: SOS → end (markup continuation — only if SOS confirmed)
     const eStart = st.sos ? localIdx(st.sos.idx) : null;
     const eEnd = st.sos ? last.length - 1 : null;
 
@@ -3002,14 +3005,12 @@ function drawActualChart(doc, s) {
       doc.setFillColor(color[0], color[1], color[2]);
       doc.rect(x1, cT, x2 - x1, cH, 'F');
     }
-    // 5 distinct, well-contrasted phase colors
-    shade(aStart, aEnd, [218, 230, 248]);   // A — cool blue   (stop downtrend)
-    shade(bStart, bEnd, [253, 248, 218]);   // B — warm yellow (building cause)
-    shade(cStart, cEnd, [253, 215, 195]);   // C — warm orange (the test = Spring)
-    shade(dStart, dEnd, [218, 240, 215]);   // D — cool green  (markup begin)
-    if (eStart != null) shade(eStart, eEnd, [220, 232, 245]); // E — soft teal (markup continue)
+    shade(aStart, aEnd, [218, 230, 248]);
+    shade(bStart, bEnd, [253, 248, 218]);
+    shade(cStart, cEnd, [253, 215, 195]);
+    shade(dStart, dEnd, [218, 240, 215]);
+    if (eStart != null) shade(eStart, eEnd, [220, 232, 245]);
 
-    // Vertical dashed phase divider lines
     function divider(i) {
       if (i <= 0 || i >= last.length - 1) return;
       const x = xS(i);
@@ -3024,7 +3025,6 @@ function drawActualChart(doc, s) {
     divider(cEnd);
     if (st.sos) divider(localIdx(st.sos.idx));
 
-    // Phase labels at TOP of chart (visible above bars)
     function topLabel(startI, endI, lbl, color) {
       if (endI <= startI) return;
       const x = (xS(startI) + xS(endI)) / 2 - 6;
@@ -3040,7 +3040,6 @@ function drawActualChart(doc, s) {
     if (eStart != null) topLabel(eStart, eEnd, 'Phase E', [0, 110, 130]);
   }
 
-  // Grid
   doc.setDrawColor(232);
   doc.setLineWidth(0.1);
   for (let i = 0; i <= 5; i++) {
@@ -3052,7 +3051,6 @@ function drawActualChart(doc, s) {
     doc.text(`$${p.toFixed(2)}`, cL + cW + 1, y + 1);
   }
 
-  // Bottom-of-chart phase legend (color swatch + label)
   if (s.structure) {
     const legendY = cT + cH + 3;
     const legendItems = [
@@ -3080,7 +3078,6 @@ function drawActualChart(doc, s) {
     });
   }
 
-  // TR support/resistance (green dashed)
   doc.setDrawColor(0, 150, 0);
   doc.setLineWidth(0.35);
   if (doc.setLineDashPattern) doc.setLineDashPattern([2, 1], 0);
@@ -3093,20 +3090,17 @@ function drawActualChart(doc, s) {
   doc.text(`TR support $${s.trSupport}`,   cL + 1, yS(s.trSupport) + 3);
   doc.text(`TR resistance $${s.trResistance}`, cL + 1, yS(s.trResistance) - 1);
 
-  // SL line (red)
   doc.setDrawColor(220, 0, 0);
   if (doc.setLineDashPattern) doc.setLineDashPattern([1.5, 1], 0);
   doc.line(cL, yS(s.sl), cL + cW, yS(s.sl));
   doc.setTextColor(220, 0, 0);
   doc.text(`SL $${s.sl}`, cL + 1, yS(s.sl) + 3);
 
-  // TP1 (blue)
   doc.setDrawColor(0, 100, 200);
   doc.line(cL, yS(s.tp1), cL + cW, yS(s.tp1));
   doc.setTextColor(0, 100, 200);
   doc.text(`TP1 $${s.tp1}`, cL + 1, yS(s.tp1) - 1);
 
-  // TP2 (purple)
   doc.setDrawColor(120, 0, 180);
   doc.line(cL, yS(s.tp2), cL + cW, yS(s.tp2));
   doc.setTextColor(120, 0, 180);
@@ -3114,7 +3108,6 @@ function drawActualChart(doc, s) {
 
   if (doc.setLineDashPattern) doc.setLineDashPattern([], 0);
 
-  // Candles
   const cw = Math.max(0.4, cW / last.length * 0.7);
   last.forEach((bar, i) => {
     const x = xS(i);
@@ -3135,9 +3128,6 @@ function drawActualChart(doc, s) {
     doc.rect(x - cw / 2, yTop, cw, Math.max(0.3, yBot - yTop), 'F');
   });
 
-  // Mark all detected Wyckoff structure elements on the chart.
-  // `last` is bars.slice(-200) so we need to translate global bar indices
-  // (from structure detection) into last-array indices.
   const fullLen = bars.length;
   const lastOffset = fullLen - last.length;
   function markStructure(globalIdx, price, label, color) {
@@ -3163,7 +3153,6 @@ function drawActualChart(doc, s) {
     if (st.lps) markStructure(st.lps.idx, st.lps.low,   'LPS',    [120, 120, 120]);
     if (st.sos) markStructure(st.sos.idx, st.sos.close, 'SOS',    [0, 140, 0]);
   }
-  // Spring marker (always last, biggest, on top)
   const springIdx = last.findIndex(b => b.date === s.springDate);
   if (springIdx >= 0) {
     const sx = xS(springIdx);
@@ -3178,7 +3167,6 @@ function drawActualChart(doc, s) {
     doc.text('SPRING', sx - 6, sy + 7);
   }
 
-  // Volume
   const maxVol = Math.max(...last.map(b => b.volume));
   doc.setFontSize(7);
   doc.setTextColor(100);
@@ -3187,7 +3175,6 @@ function drawActualChart(doc, s) {
   doc.setLineWidth(0.1);
   doc.rect(cL, vT, cW, vH);
 
-  // Volume MA (30d)
   const volMa = [];
   for (let i = 0; i < last.length; i++) {
     const start = Math.max(0, i - 29);
@@ -3204,7 +3191,6 @@ function drawActualChart(doc, s) {
     doc.rect(x - cw / 2, vT + vH - h, cw, h, 'F');
   });
 
-  // Highlight Spring volume
   if (springIdx >= 0) {
     const sx = xS(springIdx);
     const springBar = last[springIdx];
@@ -3213,7 +3199,6 @@ function drawActualChart(doc, s) {
     doc.rect(sx - cw / 2, vT + vH - h, cw, h, 'F');
   }
 
-  // Volume MA line (orange)
   doc.setDrawColor(255, 140, 0);
   doc.setLineWidth(0.3);
   for (let i = 1; i < last.length; i++) {
@@ -3222,7 +3207,6 @@ function drawActualChart(doc, s) {
     doc.line(x1, y1, x2, y2);
   }
 
-  // Annotations
   let aY = vT + vH + 10;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -3234,6 +3218,7 @@ function drawActualChart(doc, s) {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(40);
   const notes = [
+    `Tier:           ${(s.tier || 'fresh').toUpperCase()}${s.bouncePct != null ? `, bounce +${s.bouncePct.toFixed(1)}%` : ''}`,
     `Trading Range:  $${s.trSupport} - $${s.trResistance}  (szerokosc ${s.trHeightPct.toFixed(1)}%)`,
     `Spring low:     $${s.springLow}  (penetracja ${s.penetrationPct.toFixed(2)}% pod TR support)`,
     `Spring close:   $${s.springClose}  ${s.springClose > s.trSupport ? '> support (recovery OK)' : '< support (recovery slabe)'}`,
@@ -3263,7 +3248,6 @@ function drawTheoreticalChart(doc, s) {
   doc.setLineWidth(0.2);
   doc.rect(cL, cT, cW, cH);
 
-  // Idealized accumulation pattern (x%, y%; y: 0=top, 100=bottom)
   const path = [
     [0, 25], [8, 78], [13, 90], [22, 38], [30, 75],
     [40, 55], [48, 70], [55, 50], [62, 72],
@@ -3279,7 +3263,6 @@ function drawTheoreticalChart(doc, s) {
              cL + x2 / 100 * cW, cT + y2 / 100 * cH);
   }
 
-  // Support / resistance dashed lines
   doc.setDrawColor(0, 150, 0);
   doc.setLineWidth(0.3);
   if (doc.setLineDashPattern) doc.setLineDashPattern([2, 1], 0);
@@ -3287,14 +3270,12 @@ function drawTheoreticalChart(doc, s) {
   doc.line(cL + 22 / 100 * cW, cT + 38 / 100 * cH, cL + 87 / 100 * cW, cT + 38 / 100 * cH);
   if (doc.setLineDashPattern) doc.setLineDashPattern([], 0);
 
-  // Phase labels
   doc.setFontSize(7);
   doc.setTextColor(150);
   ['Phase A', 'Phase B', 'Phase C', 'Phase D', 'Phase E'].forEach((p, i) => {
     doc.text(p, cL + (i * 20 + 8) / 100 * cW, cT + cH + 4);
   });
 
-  // Structure markers
   const labels = [
     { x: 8,  y: 78, lab: 'PS',          color: [80, 80, 80] },
     { x: 13, y: 90, lab: 'SC',          color: [180, 0, 0] },
@@ -3316,7 +3297,6 @@ function drawTheoreticalChart(doc, s) {
     doc.text(l.lab, x + 2.2, y - 1);
   });
 
-  // Legend
   let lY = cT + cH + 12;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
@@ -3344,7 +3324,6 @@ function drawTheoreticalChart(doc, s) {
     lY += 4;
   });
 
-  // Comparison block
   lY += 4;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
@@ -3361,8 +3340,8 @@ function drawTheoreticalChart(doc, s) {
       txt: `Wolumen Spring: ${s.springVolumeRatio.toFixed(2)}x  (wzorzec: >= 1.2x sredniej 30d)` },
     { ok: s.followThrough === true,
       txt: `Follow-through: ${s.followThrough === true ? 'TAK' : s.followThrough === false ? 'NIE' : 'PENDING'}  (wzorzec: TAK)` },
-    { ok: s.barsSinceSpring <= 3,
-      txt: `Swiezosc: ${s.barsSinceSpring}d temu  (wzorzec: <= 3 dni)` },
+    { ok: s.barsSinceSpring <= 3 || s.tier !== 'fresh',
+      txt: `Tier: ${(s.tier || 'fresh').toUpperCase()} (FRESH wzorzec: <= 3 dni)` },
     { ok: s.rr2 >= 3,
       txt: `R:R do TP2: ${s.rr2.toFixed(2)}:1  (wzorzec: >= 3:1)` },
     { ok: s.springClose > s.trSupport,
@@ -3384,13 +3363,12 @@ function drawTheoreticalChart(doc, s) {
     lY += 4.5;
   });
 
-  // Final fit score
   const fitCount = checks.filter(c => c.ok).length;
   const matchPct = (fitCount / checks.length) * 100;
 
   lY += 4;
   const summBg = matchPct >= 80 ? [232, 246, 232] : matchPct >= 60 ? [253, 247, 218] : [250, 232, 232];
-  doc.setFillColor(...summBg);
+  doc.setFillColor(summBg[0], summBg[1], summBg[2]);
   doc.rect(10, lY - 5, 190, 12, 'F');
   doc.setDrawColor(180);
   doc.setLineWidth(0.2);
@@ -3443,7 +3421,6 @@ $("test-btn").addEventListener("click", () => {
 $("export-btn").addEventListener("click", exportCsv);
 $("save-btn").addEventListener("click", saveReport);
 
-// Delegated handler for PDF buttons (signals are rendered dynamically).
 $("signals").addEventListener("click", e => {
   const btn = e.target.closest(".pdf-btn");
   if (!btn) return;
@@ -3460,7 +3437,6 @@ $("signals").addEventListener("click", e => {
     });
 });
 
-// Journal tab wiring
 document.querySelectorAll(".tab").forEach(t =>
   t.addEventListener("click", () => switchTab(t.dataset.tab)));
 $("evaluate-btn").addEventListener("click", () => {
@@ -3477,16 +3453,12 @@ $("journal-filter").addEventListener("change", renderJournal);
 $("journal-search").addEventListener("input", renderJournal);
 updateJournalCount();
 
-// Persist config in localStorage
 const PERSIST = ["nav", "position-usd", "minrr", "minscore", "minstruct", "universe", "source", "tdkey", "finkey", "rescan-min", "daily-time"];
 try {
   for (const id of PERSIST) {
     const v = localStorage.getItem("wyck_" + id);
     if (v != null) $(id).value = v;
   }
-  // Persist on "input" (fires on every keystroke + paste) and "change" (fallback).
-  // Earlier we only listened to "change" which fires on blur — so a paste-then-immediate-click
-  // could lose the key. "input" fixes that for text/password fields.
   for (const id of PERSIST) {
     const save = () => { try { localStorage.setItem("wyck_" + id, $(id).value); } catch (e) {} };
     $(id).addEventListener("input", save);
@@ -3496,9 +3468,6 @@ try {
   $("source").dispatchEvent(new Event("change"));
 } catch (e) { /* localStorage might be blocked */ }
 
-// ?autoscan=1 — Task Scheduler can launch the page and we kick off the scan
-// automatically. We wait 1.5 s so config (loaded from localStorage above) is
-// fully wired before clicking.
 if (new URLSearchParams(location.search).get("autoscan") === "1") {
   setTimeout(() => {
     log("Autostart przez ?autoscan=1 — uruchamiam skan.", "ok");
