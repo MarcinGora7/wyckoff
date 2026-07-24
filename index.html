@@ -3358,12 +3358,106 @@ function _closedResult(pos, sig, exit) {
   return { pct, rMult, exitPrice };
 }
 
+
 function updateDailyCount() {
   const el = $("daily-count");
-  if (el) el.textContent = String(loadPortfolio().length);
+  if (el) el.textContent = String(loadJournal().length);
 }
 
 function renderDailyTransactions() {
+  const journal = loadJournal();
+  const today = [];
+  const yesterday = [];
+
+  for (const je of journal) {
+    const exit = _modelExitInfo(je);          // null = pozycja wciąż aktywna
+    if (exit) yesterday.push({ je, exit });
+    else today.push({ je });
+  }
+
+  today.sort((a, b) => String(b.je.scanDate).localeCompare(String(a.je.scanDate)));
+  yesterday.sort((a, b) => String((b.je.integrity && b.je.integrity.lastDate) || b.je.scanDate).localeCompare(String((a.je.integrity && a.je.integrity.lastDate) || a.je.scanDate)));
+
+  const fmtDate = d => { if (!d) return "—"; const s = String(d).slice(0, 10); const p = s.split("-"); return p.length === 3 ? `${p[2]}.${p[1]}` : s; };
+  const rrColor = rr => rr >= 3 ? "#a3be8c" : rr >= 2 ? "#88c0d0" : rr >= 1 ? "#ebcb8b" : "#bf616a";
+  const statusStyles = {
+    tp2_hit:['#a3be8c','TP2 ✓'], tp1_sos:['#a3be8c','TP1+SOS'], tp1_hit:['#a3be8c','TP1 ✓'],
+    sos_active:['#88c0d0','SOS aktywny'], on_track:['#88c0d0','Spring trzyma'], fresh:['#8fbcbb','Świeży'],
+    warning_sl:['#ebcb8b','⚠ blisko SL'], warning_spring:['#ebcb8b','⚠ test Spring'], warning_lows:['#ebcb8b','⚠ brak progresji'],
+    broken_spring:['#bf616a','✗ Spring złamany'], broken_sl:['#bf616a','✗ Stop loss'],
+  };
+
+  // ---------- Sekcja Dzisiaj (z Dziennika) ----------
+  let todayRows;
+  if (today.length === 0) {
+    todayRows = '<tbody><tr><td colspan="12" class="txn-empty">Brak otwartych sygnałów w Dzienniku. Uruchom skan lub kliknij „Aktualizuj wyniki" w Dzienniku.</td></tr></tbody>';
+  } else {
+    todayRows = '<tbody>' + today.map(({ je }) => {
+      const priceInfo = getCurrentPriceWithSource(je.ticker);
+      const curPrice = priceInfo.price;
+      const priceCell = curPrice ? `$${curPrice.toFixed(2)}` : `$${je.entry.toFixed(2)}`;
+      const rr = `<span style="color:${rrColor(je.rr2)};font-weight:600;">${je.rr2.toFixed(2)}</span>`;
+      const e = computeExpectancy(je);
+      const exp = e ? `<span class="${e.r >= 0 ? 'txn-exp-pos' : 'txn-exp-neg'}" title="p=${(e.p*100).toFixed(0)}% · śr.zysk ${e.avgWinR}R · ${esc(e.source)}">${e.r >= 0 ? '+' : ''}${e.r.toFixed(2)}R</span>` : '<span class="muted">—</span>';
+      const d = estimateSetupDuration(je);
+      const dur = d ? `<span class="txn-dur" title="${esc(d.source)}">≈${d.days} sesji <span class="txn-dur-range">(${d.lo}–${d.hi})</span></span>` : '<span class="muted">—</span>';
+      let status = '<span style="color:#ebcb8b;">OPEN</span>';
+      if (je.integrity) {
+        const [c, l] = statusStyles[je.integrity.status] || ['#6b7a8c', je.integrity.status];
+        status = `<span style="color:${c};font-weight:500;">${l}</span>`;
+      }
+      return `<tr>
+        <td><b style="color:#88c0d0;">${esc(je.ticker)}</b></td>
+        <td><span class="txn-typ-buy">BUY</span></td>
+        <td>${fmtDate(je.scanDate)}</td>
+        <td>${priceCell}</td>
+        <td>${je.shares || '—'}</td>
+        <td style="color:#bf616a;">$${je.sl.toFixed(2)}</td>
+        <td style="color:#88c0d0;">$${je.tp1.toFixed(2)}</td>
+        <td style="color:#a3be8c;">$${je.tp2.toFixed(2)}</td>
+        <td>${rr}</td>
+        <td>${exp}</td>
+        <td>${dur}</td>
+        <td>${status}</td>
+      </tr>`;
+    }).join('') + '</tbody>';
+  }
+  $("daily-today-table").innerHTML = `<thead><tr>
+    <th>Ticker</th><th>Typ</th><th>Data</th><th>Cena</th><th>Ilość</th>
+    <th>SL</th><th>TP1</th><th>TP2</th><th>R:R</th><th>Expectancy</th><th>Szac. czas setupu</th><th>Status</th>
+  </tr></thead>${todayRows}`;
+
+  // ---------- Sekcja Wczoraj (z Dziennika) ----------
+  let ydayRows;
+  if (yesterday.length === 0) {
+    ydayRows = '<tbody><tr><td colspan="5" class="txn-empty">Brak zamkniętych sygnałów (żaden wpis w Dzienniku nie dotknął jeszcze TP/SL).</td></tr></tbody>';
+  } else {
+    ydayRows = '<tbody>' + yesterday.map(({ je, exit }) => {
+      const exitPrice = exit.price;
+      const pct = (exitPrice - je.entry) / je.entry * 100;
+      const risk = Math.max(0.01, je.entry - je.sl);
+      const rMult = (exitPrice - je.entry) / risk;
+      const reasonMap = { 'TP2': 'TP2 osiągnięte', 'TP1': 'TP1 osiągnięte', 'SL': 'Stop loss', 'Spring złamany': 'Spring złamany' };
+      const reason = reasonMap[exit.type] || exit.type;
+      const pctCls = pct >= 0 ? 'pos' : 'neg';
+      const rCls = rMult >= 0 ? 'txn-exp-pos' : 'txn-exp-neg';
+      return `<tr>
+        <td><b style="color:#88c0d0;">${esc(je.ticker)}</b></td>
+        <td><span class="txn-typ-sell">SELL</span></td>
+        <td><span class="${pctCls}">${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</span></td>
+        <td>${esc(reason)}${je.integrity && je.integrity.lastDate ? ` <span class="txn-badge-src">${fmtDate(je.integrity.lastDate)}</span>` : ''}</td>
+        <td><span class="${rCls}">${rMult >= 0 ? '+' : ''}${rMult.toFixed(1)}R</span></td>
+      </tr>`;
+    }).join('') + '</tbody>';
+  }
+  $("daily-yesterday-table").innerHTML = `<thead><tr>
+    <th>Ticker</th><th>Typ</th><th>Wynik %</th><th>Powód wyjścia</th><th>R:R osiągnięte</th>
+  </tr></thead>${ydayRows}`;
+
+  const oc = $("daily-open-count"); if (oc) oc.textContent = `${today.length} otwartych`;
+  const cc = $("daily-closed-count"); if (cc) cc.textContent = `${yesterday.length} zamkniętych`;
+  updateDailyCount();
+}
   const portfolio = loadPortfolio();
   const today = [];
   const yesterday = [];
